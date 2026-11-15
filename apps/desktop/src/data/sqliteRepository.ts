@@ -1,9 +1,9 @@
 import initSqlJs, { type Database } from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { createEmptyDoc, createInitialWorkspace } from '../domain/defaults';
-import { createId } from '../domain/ids';
 import type { BibleCard, Character, Chapter, Foreshadow, OutlineItem, Project, Scene, SceneStatus, TimelineEvent, Volume, WorkspaceData } from '../domain/types';
 import type { JSONContent } from '@tiptap/core';
+import { parseJson } from './json';
 import { readStoredWorkspace, saveLegacyWorkspace } from './localRepository';
 import { WORKSPACE_SCHEMA } from './schema';
 
@@ -77,14 +77,6 @@ function getScalar(db: Database, sql: string, params: unknown[] = []): unknown {
   }
 }
 
-function parseJson<T>(value: unknown, fallback: T): T {
-  if (typeof value !== 'string') return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
 function loadWorkspaceFromDatabase(db: Database): WorkspaceData {
   const projects: Project[] = getRows(db, 'SELECT * FROM projects ORDER BY created_at ASC').map((row) => ({
     id: String(row.id),

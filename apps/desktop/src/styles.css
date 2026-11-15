@@ -115,7 +115,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .app-shell {
   display: grid;
   grid-template-columns: 72px 286px minmax(0, 1fr) 304px;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
   height: 100vh;
+  overflow: hidden;
   background: var(--bg);
 }
 
@@ -155,6 +158,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 0;
+  overflow-y: auto;
   border-right: 1px solid var(--line-soft);
   background: var(--nav-bg);
   padding: 16px 8px 12px;
@@ -232,6 +237,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid var(--line-soft);
   background: var(--panel);
 }
@@ -259,7 +266,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .tree-scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 14px 10px;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
@@ -341,6 +350,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   background: var(--bg);
 }
 
@@ -425,7 +435,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .editor-scroll {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 22px 40px 48px;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
@@ -498,6 +510,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   overflow: auto;
   border-left: 1px solid var(--line-soft);
   background: var(--panel);
@@ -710,7 +723,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .module-stage {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: var(--space-6);
   background: var(--bg);
 }
@@ -1158,7 +1174,41 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .analysis-actions .primary-button,
 .analysis-actions .secondary-button { min-height: 36px; }
 .analysis-progress { margin: 14px 0 0; color: var(--accent); font-size: var(--font-meta); }
-.analysis-report-text { max-height: 60vh; margin: 16px 0 0; padding: 18px; overflow: auto; border: 1px solid var(--line-soft); border-radius: var(--radius-control); background: var(--bg); color: var(--ink-soft); font: 11px/1.85 var(--font-ui); white-space: pre-wrap; }
+.analysis-report-card { padding: 0; overflow: hidden; }
+.analysis-report-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 24px; border-bottom: 1px solid var(--line-soft); }
+.analysis-report-heading h2 { margin: 0; color: var(--ink); font-family: var(--font-story); font-size: 21px; font-weight: 600; }
+.analysis-report-meta-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 7px 0 0; color: var(--faint); font-size: var(--font-meta); }
+.analysis-report-meta-line span + span::before { margin-right: 12px; color: var(--line); content: "·"; }
+.analysis-report-heading .analysis-actions { flex: 0 0 auto; margin-top: 0; flex-wrap: nowrap; }
+.analysis-report-document { max-width: 920px; margin: 0 auto; padding: 34px 42px 58px; color: var(--ink-soft); font-family: var(--font-ui); font-size: 14px; line-height: 1.88; text-wrap: pretty; }
+.analysis-report-document > :first-child { margin-top: 0; }
+.analysis-report-document h1 { margin: 0 0 26px; padding-bottom: 18px; border-bottom: 1px solid var(--line); color: var(--ink); font-family: var(--font-story); font-size: 27px; font-weight: 600; line-height: 1.35; letter-spacing: 0.01em; }
+.analysis-report-document h2 { margin: 38px 0 16px; padding-bottom: 9px; border-bottom: 1px solid var(--line-soft); color: var(--ink); font-family: var(--font-story); font-size: 20px; font-weight: 600; line-height: 1.45; }
+.analysis-report-document h3 { margin: 27px 0 10px; color: var(--ink); font-family: var(--font-story); font-size: 16px; font-weight: 600; line-height: 1.55; }
+.analysis-report-document h4 { margin: 21px 0 8px; color: var(--ink-soft); font-size: 14px; font-weight: 700; line-height: 1.55; }
+.analysis-report-document p { margin: 0 0 14px; }
+.analysis-report-document strong { color: var(--ink); font-weight: 700; }
+.analysis-report-document em { color: var(--muted); }
+.analysis-report-document code { padding: 2px 5px; border: 1px solid var(--line-soft); border-radius: 4px; background: var(--sunken-bg); color: var(--accent); font-family: ui-monospace, "Cascadia Code", monospace; font-size: 0.9em; }
+.analysis-report-document ul, .analysis-report-document ol { margin: 0 0 17px; padding-left: 24px; }
+.analysis-report-document li { margin: 7px 0; padding-left: 3px; }
+.analysis-report-document li::marker { color: var(--accent); }
+.analysis-report-meta { margin: 0 0 26px; padding: 13px 16px; border: 1px solid var(--line-soft); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-control) var(--radius-control) 0; background: var(--sunken-bg); color: var(--muted); font-size: 12px; line-height: 1.75; }
+.analysis-report-meta p { margin: 0; }
+.analysis-report-meta p + p { margin-top: 3px; }
+.analysis-report-table-wrap { margin: 18px 0 25px; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.analysis-report-document table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 13px; line-height: 1.7; }
+.analysis-report-document th { padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface-3); color: var(--ink); font-weight: 650; text-align: left; }
+.analysis-report-document td { padding: 9px 12px; border-top: 1px solid var(--line-soft); vertical-align: top; }
+.analysis-report-document tbody tr:first-child td { border-top: 0; }
+.analysis-report-document tbody tr:hover { background: var(--sunken-bg); }
+@media (max-width: 760px) {
+  .analysis-report-heading { flex-direction: column; padding: 17px 18px; }
+  .analysis-report-heading .analysis-actions { flex-wrap: wrap; }
+  .analysis-report-document { padding: 26px 20px 44px; font-size: 13.5px; }
+  .analysis-report-document h1 { font-size: 23px; }
+  .analysis-report-document h2 { font-size: 18px; }
+}
 @media (max-width: 900px) {
   .ai-settings-grid { grid-template-columns: 1fr 1fr; }
   .local-data-grid { grid-template-columns: 1fr 1fr; }

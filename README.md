@@ -4,6 +4,10 @@
 
 **Local-first writing workspace with BYOK AI for Chinese long-form fiction.**
 
+## 开源发布文章
+
+- [微光写作台 0.2 开源发布：把长篇写作留在本地，把 AI 的选择权交还作者](docs/开源发布文章.md)
+
 ## 产品边界
 
 - Windows 桌面端，Tauri 2 + React + TypeScript
@@ -79,12 +83,44 @@ node node_modules/vitest/vitest.mjs run
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
+## 用户条款
+
+安装向导会展示并请求确认用户使用条款。软件内“设置 → 用户条款与隐私”使用同一份源文件：
+
+`apps/desktop/src-tauri/legal/USER_TERMS.txt`
+
 ## 构建 Windows 版本
 
 ```powershell
 cd apps/desktop
 npm run tauri:build
 ```
+
+安装包输出位于：
+
+```text
+apps/desktop/src-tauri/target/release/bundle/nsis/
+```
+
+## Windows 代码签名
+
+正式分发需要受 Windows 信任的代码签名证书。仓库提供签名脚本：
+
+```powershell
+cd apps/desktop
+$env:WINDOWS_CODESIGN_THUMBPRINT = '<证书 SHA1 指纹>'
+powershell -ExecutionPolicy Bypass -File scripts/sign-windows.ps1 <exe-path>
+```
+
+也可以使用 PFX：
+
+```powershell
+$env:WINDOWS_CODESIGN_PFX = 'C:\path\to\certificate.pfx'
+$env:WINDOWS_CODESIGN_PASSWORD = '<pfx-password>'
+powershell -ExecutionPolicy Bypass -File scripts/sign-windows.ps1 <exe-path>
+```
+
+签名后会使用 `signtool verify /pa` 自动验证。没有受信任证书时只能生成未签名安装包。
 
 无安装程序打包：
 

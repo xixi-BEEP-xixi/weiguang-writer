@@ -4,6 +4,46 @@ use std::str::FromStr;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use tauri::Manager;
 
+#[cfg(target_os = "windows")]
+fn apply_native_window_icons(window: &tauri::WebviewWindow) {
+    use std::ffi::c_void;
+    use std::ptr;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetModuleHandleW(module_name: *const u16) -> *mut c_void;
+    }
+    #[link(name = "user32")]
+    extern "system" {
+        fn GetSystemMetrics(index: i32) -> i32;
+        fn LoadImageW(instance: *mut c_void, name: *const u16, image_type: u32, cx: i32, cy: i32, flags: u32) -> *mut c_void;
+        fn SendMessageW(window: *mut c_void, message: u32, wparam: usize, lparam: isize) -> isize;
+    }
+
+    const IMAGE_ICON: u32 = 1;
+    const LR_DEFAULTCOLOR: u32 = 0;
+    const WM_SETICON: u32 = 0x0080;
+    const ICON_SMALL: usize = 0;
+    const ICON_BIG: usize = 1;
+    const SM_CXICON: i32 = 11;
+    const SM_CYICON: i32 = 12;
+    const SM_CXSMICON: i32 = 49;
+    const SM_CYSMICON: i32 = 50;
+    const APP_ICON_RESOURCE_ID: usize = 32512;
+
+    let Ok(hwnd) = window.hwnd() else { return; };
+    let native_window = hwnd.0 as *mut c_void;
+    unsafe {
+        let instance = GetModuleHandleW(ptr::null());
+        let big = LoadImageW(instance, APP_ICON_RESOURCE_ID as *const u16, IMAGE_ICON,
+            GetSystemMetrics(SM_CXICON).max(32), GetSystemMetrics(SM_CYICON).max(32), LR_DEFAULTCOLOR);
+        let small = LoadImageW(instance, APP_ICON_RESOURCE_ID as *const u16, IMAGE_ICON,
+            GetSystemMetrics(SM_CXSMICON).max(16), GetSystemMetrics(SM_CYSMICON).max(16), LR_DEFAULTCOLOR);
+        if !big.is_null() { SendMessageW(native_window, WM_SETICON, ICON_BIG, big as isize); }
+        if !small.is_null() { SendMessageW(native_window, WM_SETICON, ICON_SMALL, small as isize); }
+    }
+}
+
 fn write_log(message: &str) -> Result<(), String> {
     let file_path = std::env::temp_dir().join("weiguang-writer-startup.log");
     let mut file = std::fs::OpenOptions::new()
@@ -455,6 +495,10 @@ pub fn run() {
         .plugin(tauri_plugin_sql::Builder::default().build())
         .setup(|app| {
             migrate_legacy_app_data(app.handle());
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                apply_native_window_icons(&window);
+            }
             let app_data = app.path().app_data_dir().map(|path| path.display().to_string()).unwrap_or_else(|_| "unavailable".to_string());
             let _ = write_log(&format!("setup: app_data={app_data}"));
             Ok(())

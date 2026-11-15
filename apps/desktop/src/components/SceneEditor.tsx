@@ -37,7 +37,7 @@ export function SceneEditor({ scene, chapterTitle, projectName }: SceneEditorPro
   const [typographyOpen, setTypographyOpen] = useState(false);
   const [writingPreferences, setWritingPreferences] = useState<WritingPreferences>(() => loadWritingPreferences());
   const [focusMode, setFocusMode] = useState(false);
-  const [saveHint, setSaveHint] = useState('自动保存 · 2s');
+  const saveHint = '自动保存 · 2s';
   const [, setSelectionRevision] = useState(0);
 
   useEffect(() => { sceneIdRef.current = scene.id; }, [scene.id]);

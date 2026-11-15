@@ -1,43 +1,61 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "微光写作台",
-  "version": "0.2.0",
-  "identifier": "com.weiguang.writer",
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://127.0.0.1:5173",
-    "beforeBuildCommand": "node node_modules/typescript/bin/tsc --noEmit && node node_modules/vite/bin/vite.js build",
-    "frontendDist": "../dist"
-  },
-  "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "微光写作台",
-        "url": "index.html",
-        "width": 1440,
-        "height": 960,
-        "minWidth": 1100,
-        "minHeight": 700,
-        "resizable": true,
-        "fullscreen": false,
-        "decorations": false,
-        "shadow": true,
-        "theme": "Light",
-        "backgroundColor": "#f7f6f1"
-      }
-    ],
-    "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'"
-    }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/icon.ico"
-    ]
-  }
+    "$schema":  "https://schema.tauri.app/config/2",
+    "productName":  "微光写作台",
+    "version":  "0.2.0",
+    "identifier":  "com.weiguang.writer",
+    "build":  {
+                  "beforeDevCommand":  "npm run dev",
+                  "devUrl":  "http://127.0.0.1:5173",
+                  "beforeBuildCommand":  "node node_modules/typescript/bin/tsc --noEmit \u0026\u0026 node node_modules/vite/bin/vite.js build",
+                  "frontendDist":  "../dist"
+              },
+    "app":  {
+                "windows":  [
+                                {
+                                    "label":  "main",
+                                    "title":  "微光写作台",
+                                    "url":  "index.html",
+                                    "width":  1440,
+                                    "height":  960,
+                                    "minWidth":  1100,
+                                    "minHeight":  700,
+                                    "resizable":  true,
+                                    "fullscreen":  false,
+                                    "decorations":  false,
+                                    "shadow":  true,
+                                    "theme":  "Light",
+                                    "backgroundColor":  "#f7f6f1"
+                                }
+                            ],
+                "security":  {
+                                 "csp":  "default-src \u0027self\u0027; img-src \u0027self\u0027 asset: http://asset.localhost data: blob:; style-src \u0027self\u0027 \u0027unsafe-inline\u0027; font-src \u0027self\u0027 data:; script-src \u0027self\u0027; connect-src ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:*; object-src \u0027none\u0027; base-uri \u0027none\u0027; form-action \u0027none\u0027"
+                             }
+            },
+    "bundle":  {
+                   "active":  true,
+                   "targets":  "all",
+                   "icon":  [
+                                "icons/32x32.png",
+                                "icons/128x128.png",
+                                "icons/icon.ico"
+                            ],
+                   "licenseFile":  "legal/USER_TERMS.txt",
+                   "windows":  {
+                                   "nsis":  {
+                                                "languages":  [
+                                                                  "SimpChinese",
+                                                                  "English"
+                                                              ],
+                                                "displayLanguageSelector":  true,
+                                                "installMode":  "currentUser",
+                                                "headerImage":  "installer/wizard-header.bmp",
+                                                "sidebarImage":  "installer/wizard-sidebar.bmp",
+                                                "installerIcon":  "icons/icon.ico",
+                                                "uninstallerIcon":  "icons/icon.ico",
+                                                "uninstallerHeaderImage":  "installer/wizard-header.bmp",
+                                                "installerHooks":  "installer/wizard-hooks.nsh",
+                                                "startMenuFolder":  "微光写作台"
+                                            }
+                               }
+               }
 }

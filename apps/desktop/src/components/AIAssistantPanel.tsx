@@ -1,6 +1,6 @@
-﻿import type { Editor } from '@tiptap/core';
+import type { Editor } from '@tiptap/core';
 import { BrainCircuit, Copy, CornerDownLeft, LoaderCircle, ShieldCheck, Sparkles, TriangleAlert, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { analyzeChapter, estimateStreamRequest, extractMemoryCandidates, streamAI, type AIConflict, type AIStreamResult } from '../data/aiClient';
 import { loadAiSettings } from '../data/aiSettings';
 import { markAiOperationInserted } from '../data/aiMemoryStore';

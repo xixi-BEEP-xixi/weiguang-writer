@@ -30,11 +30,3 @@ export function readStoredWorkspace(): WorkspaceData | null {
 export function saveLegacyWorkspace(data: WorkspaceData): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
-
-export function clearLegacyWorkspace(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-export function workspaceStorageKey(): string {
-  return STORAGE_KEY;
-}

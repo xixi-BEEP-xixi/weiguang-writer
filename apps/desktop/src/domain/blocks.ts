@@ -15,8 +15,10 @@ export function ensureBlockIds(node: JSONContent): JSONContent {
   return next;
 }
 
-export function collectPlainText(node: JSONContent): string {
-  if (node.type === 'text') return node.text ?? '';
-  if (!node.content) return '';
-  return node.content.map((child) => collectPlainText(child)).join('');
+export function collectPlainText(node: unknown): string {
+  if (!node || typeof node !== 'object') return '';
+  const value = node as { type?: string; text?: string; content?: unknown[] };
+  if (value.type === 'text') return value.text ?? '';
+  if (!Array.isArray(value.content)) return '';
+  return value.content.map((child) => collectPlainText(child)).join('');
 }

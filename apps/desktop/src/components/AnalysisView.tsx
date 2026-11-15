@@ -1,21 +1,21 @@
-﻿import { BookOpenCheck, Download, FileText, LoaderCircle, Play, RotateCcw, ShieldCheck, Square, Upload } from 'lucide-react';
+import { BookOpenCheck, Download, FileText, LoaderCircle, Play, RotateCcw, ShieldCheck, Square, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { directChat } from '../data/aiClient';
 import { loadAiSettings } from '../data/aiSettings';
 import { loadLatestAnalysisReport, saveAnalysisReport, type StoredAnalysisReport } from '../data/localArtifactStore';
 import { useWriterStore } from '../data/writerStore';
+import { collectPlainText } from '../domain/blocks';
+import { docxToManuscriptText } from '../domain/importers';
+import { AnalysisReport } from './AnalysisReport';
 import { PageGuideBubble } from './PageGuideBubble';
 
 type AnalysisKind = 'book_scan' | 'book_analysis';
 
-
-function collectText(node: unknown): string {
-  if (!node || typeof node !== 'object') return '';
-  const value = node as { type?: string; text?: string; content?: unknown[] };
-  if (value.type === 'text') return value.text ?? '';
-  if (!Array.isArray(value.content)) return '';
-  return value.content.map(collectText).join('');
+function isSupportedAnalysisFile(file: File): boolean {
+  return /\.(txt|md|markdown|docx)$/i.test(file.name);
 }
+
+
 
 function chunkText(text: string, size = 8000): string[] {
   const normalized = text.replace(/\r\n/g, '\n').trim();
@@ -63,15 +63,31 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
     const chapters = data.chapters.filter((chapter) => chapter.projectId === data.activeProjectId).sort((a, b) => a.sort - b.sort);
     return chapters.map((chapter) => {
       const scenes = data.scenes.filter((scene) => scene.chapterId === chapter.id).sort((a, b) => a.sort - b.sort);
-      return [`# ${chapter.title}`, ...scenes.map((scene) => `## ${scene.title}\n${collectText(scene.doc)}`)].join('\n\n');
+      return [`# ${chapter.title}`, ...scenes.map((scene) => `## ${scene.title}\n${collectPlainText(scene.doc)}`)].join('\n\n');
     }).join('\n\n');
   }, [data]);
 
   const readSource = async (): Promise<string> => {
     if (sourceMode === 'project') return projectText;
-    if (!file) throw new Error('请选择 TXT 或 Markdown 文件');
+    if (!file) throw new Error('请选择 TXT、Markdown 或 DOCX 文件');
+    if (!isSupportedAnalysisFile(file)) throw new Error('仅支持 TXT、Markdown 或 DOCX 文件');
     if (!rightsConfirmed) throw new Error('请确认你拥有该文本的版权或授权');
-    return file.text();
+    return file.name.toLowerCase().endsWith('.docx') ? docxToManuscriptText(file) : file.text();
+  };
+
+  const selectFile = (selected: File | null) => {
+    setRightsConfirmed(false);
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+    if (!isSupportedAnalysisFile(selected)) {
+      setFile(null);
+      setError('仅支持 TXT、Markdown 或 DOCX 文件');
+      return;
+    }
+    setError('');
+    setFile(selected);
   };
 
   const run = async () => {
@@ -161,7 +177,7 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
         target='[data-tour="analysis-workspace"]'
         title={kind === 'book_analysis' ? '拆书怎么用' : '全书体检怎么用'}
         points={kind === 'book_analysis' ? [
-          '选择当前项目，或上传拥有版权或授权的旧稿。',
+          '选择当前项目，或上传拥有版权或授权的 TXT、Markdown、DOCX 旧稿。',
           '开始分析后会生成结构、人物、节拍和文风报告。',
           '报告只作参考，不会改写正文。',
         ] : [
@@ -174,13 +190,23 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
       <section className="content-card analysis-local-card" data-tour="analysis-workspace">
         <div className="section-title-row"><div><p className="eyebrow">SOURCE</p><h2>分析来源</h2></div><FileText size={18} /></div>
         <div className="segmented" role="tablist" aria-label="分析来源"><button type="button" className={sourceMode === 'project' ? 'is-active' : ''} onClick={() => setSourceMode('project')}>当前项目</button><button type="button" className={sourceMode === 'file' ? 'is-active' : ''} onClick={() => setSourceMode('file')}>上传旧稿</button></div>
-        {sourceMode === 'project' ? <p className="analysis-source-note">将读取当前项目的全部章节与正文，共 {projectText.length.toLocaleString()} 字。不会修改作者正文。</p> : <div className="analysis-file-row"><label className="secondary-button file-picker"><Upload size={15} />选择 TXT / Markdown<input type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label><span>{file?.name ?? '未选择文件'}</span></div>}
+        {sourceMode === 'project' ? <p className="analysis-source-note">将读取当前项目的全部章节与正文，共 {projectText.length.toLocaleString()} 字。不会修改作者正文。</p> : <div className="analysis-file-row"><label className="secondary-button file-picker"><Upload size={15} />选择 TXT / Markdown / DOCX<input type="file" accept=".txt,.md,.markdown,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => selectFile(event.target.files?.[0] ?? null)} /></label><span>{file?.name ?? '未选择文件'}</span></div>}
         {sourceMode === 'file' && <label className="ai-strict-toggle"><input type="checkbox" checked={rightsConfirmed} onChange={(event) => setRightsConfirmed(event.target.checked)} />我确认拥有该文本的版权或合法授权</label>}
         <div className="analysis-actions"><button className="primary-button" type="button" disabled={busy || (sourceMode === 'file' && (!file || !rightsConfirmed))} onClick={() => void run()}>{busy ? <LoaderCircle size={15} className="spin" /> : <Play size={15} />}{busy ? '分析中…' : '开始分析'}</button>{busy && <button className="secondary-button" type="button" onClick={cancel}><Square size={14} />取消</button>}</div>
         {progress && <p className="analysis-progress">{progress}</p>}
       </section>
-      {report ? <section className="content-card analysis-report-card"><div className="section-title-row"><div><p className="eyebrow">REPORT</p><h2>{kind === 'book_analysis' ? '拆书报告' : '全书体检报告'}</h2><p>{report.source} · {new Date(report.created_at).toLocaleString()}</p></div><div className="analysis-actions"><button className="secondary-button" type="button" onClick={exportReport}><Download size={14} />导出 Markdown</button><button className="secondary-button" type="button" onClick={() => setReport(null)}><RotateCcw size={14} />清空显示</button></div></div><pre className="analysis-report-text">{report.text}</pre></section> : <section className="content-card analysis-report-card"><div className="module-empty"><BookOpenCheck size={24} /><strong>还没有分析报告</strong><p>配置模型 API Key 后，从当前项目或上传旧稿生成分析报告。</p></div></section>}
-      <p className="settings-security-note"><ShieldCheck size={14} />报告会保留在项目中。当前支持 TXT/Markdown 来源与 Markdown 导出。</p>
+      {report ? <section className="content-card analysis-report-card">
+        <header className="analysis-report-heading">
+          <div>
+            <p className="eyebrow">REPORT</p>
+            <h2>{kind === 'book_analysis' ? '拆书报告' : '全书体检报告'}</h2>
+            <p className="analysis-report-meta-line"><span>{report.source}</span><span>{new Date(report.created_at).toLocaleString()}</span><span>约 {report.text.length.toLocaleString()} 字</span></p>
+          </div>
+          <div className="analysis-actions"><button className="secondary-button" type="button" onClick={exportReport}><Download size={14} />导出 Markdown</button><button className="secondary-button" type="button" onClick={() => setReport(null)}><RotateCcw size={14} />清空显示</button></div>
+        </header>
+        <AnalysisReport text={report.text} />
+      </section> : <section className="content-card analysis-report-card"><div className="module-empty"><BookOpenCheck size={24} /><strong>还没有分析报告</strong><p>配置模型 API Key 后，从当前项目或上传旧稿生成分析报告。</p></div></section>}
+      <p className="settings-security-note"><ShieldCheck size={14} />报告会保留在项目中。当前支持 TXT、Markdown、DOCX 来源与 Markdown 导出。</p>
     </main>
   );
 }

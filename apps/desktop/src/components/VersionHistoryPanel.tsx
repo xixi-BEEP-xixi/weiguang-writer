@@ -7,34 +7,12 @@ import {
   type SceneVersionDetail, type SceneVersionSummary,
 } from '../data/versionClient';
 import { collectPlainText } from '../domain/blocks';
+import { diffParagraphs } from '../domain/textDiff';
 import type { Scene } from '../domain/types';
 
 function paragraphsOf(doc: unknown): string[] {
   const node = doc as { content?: Array<Record<string, unknown>> };
-  return (node.content ?? []).map((child) => collectPlainText(child as never).trim()).filter(Boolean);
-}
-
-function diffParagraphs(previous: string[], current: string[]): Array<{ kind: 'same' | 'added' | 'removed'; text: string }> {
-  const rows = Math.min(previous.length, 1200);
-  const columns = Math.min(current.length, 1200);
-  const previousSlice = previous.slice(0, rows);
-  const currentSlice = current.slice(0, columns);
-  const table = Array.from({ length: rows + 1 }, () => new Uint32Array(columns + 1));
-  for (let i = rows - 1; i >= 0; i -= 1) {
-    for (let j = columns - 1; j >= 0; j -= 1) {
-      table[i][j] = previousSlice[i] === currentSlice[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1]);
-    }
-  }
-  const result: Array<{ kind: 'same' | 'added' | 'removed'; text: string }> = [];
-  let i = 0; let j = 0;
-  while (i < rows && j < columns) {
-    if (previousSlice[i] === currentSlice[j]) { result.push({ kind: 'same', text: currentSlice[j] }); i += 1; j += 1; }
-    else if (table[i + 1][j] >= table[i][j + 1]) { result.push({ kind: 'removed', text: previousSlice[i] }); i += 1; }
-    else { result.push({ kind: 'added', text: currentSlice[j] }); j += 1; }
-  }
-  while (i < rows) { result.push({ kind: 'removed', text: previousSlice[i] }); i += 1; }
-  while (j < columns) { result.push({ kind: 'added', text: currentSlice[j] }); j += 1; }
-  return result;
+  return (node.content ?? []).map((child) => collectPlainText(child).trim()).filter(Boolean);
 }
 
 export function VersionHistoryPanel({ editor, scene, onClose }: { editor: Editor; scene: Scene; onClose: () => void }) {

@@ -1,4 +1,4 @@
-﻿import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 import { resolveAiPricing } from './aiPricing';
 
 export type AiCurrency = 'USD' | 'CNY';
@@ -150,7 +150,7 @@ export async function clearAiApiKey(): Promise<void> {
   sessionStorage.removeItem(DEV_SECRET_KEY);
 }
 
-export function normalizeBaseUrl(baseUrl: string): string {
+function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
 }
 

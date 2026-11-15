@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/core';
+import { collectPlainText } from '../domain/blocks';
 import { deleteSceneVersionRow, getSceneVersionRow, insertSceneVersionRow, listSceneVersionRows, type SceneVersionRow } from './localArtifactStore';
 
 export interface SceneVersionSummary {
@@ -8,13 +9,6 @@ export interface SceneVersionSummary {
 
 export interface SceneVersionDetail extends SceneVersionSummary { doc_json: JSONContent; }
 
-function collectText(node: unknown): string {
-  if (!node || typeof node !== 'object') return '';
-  const value = node as { type?: string; text?: string; content?: unknown[] };
-  if (value.type === 'text') return value.text ?? '';
-  if (!Array.isArray(value.content)) return '';
-  return value.content.map(collectText).join('');
-}
 
 function hashDocument(document: JSONContent): string {
   const text = JSON.stringify(document);
@@ -44,7 +38,7 @@ export async function createSceneVersion(projectId: string, sceneId: string, doc
   const contentHash = hashDocument(docJson);
   const existing = (await listSceneVersionRows(sceneId)).find((version) => version.content_hash === contentHash && version.label === label);
   if (existing) return { ...summary(existing), deduplicated: true };
-  const text = collectText(docJson).trim();
+  const text = collectPlainText(docJson).trim();
   const row: SceneVersionRow = {
     id: crypto.randomUUID(), project_id: projectId, scene_id: sceneId, label,
     content_hash: contentHash, word_count: text.replace(/\s/g, '').length,

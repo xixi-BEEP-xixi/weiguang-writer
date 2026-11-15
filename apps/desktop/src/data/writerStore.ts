@@ -456,8 +456,5 @@ export const useWriterStore = create<WriterStore>((set) => ({
   markError: (message) => set({ saveState: 'error', error: message }),
 }));
 
-export function getActiveScene(data: WorkspaceData): Scene | undefined {
-  return data.scenes.find((scene) => scene.id === data.activeSceneId);
-}
 
 export { createInitialWorkspace };

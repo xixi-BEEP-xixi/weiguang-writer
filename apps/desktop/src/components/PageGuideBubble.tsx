@@ -4,13 +4,6 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 const GLOBAL_TOUR_KEY = 'weiguang.ui-tour.v2';
 const OPEN_PAGE_GUIDE_EVENT = 'weiguang:open-page-guide';
 
-export function openPageGuide(id: string): void {
-  window.dispatchEvent(new CustomEvent(OPEN_PAGE_GUIDE_EVENT, { detail: id }));
-}
-
-export function PageGuideButton({ guideId }: { guideId: string }) {
-  return <button className="page-guide-button" type="button" onClick={() => openPageGuide(guideId)}><CircleHelp size={14} />操作提示</button>;
-}
 
 export function PageGuideBubble({ id, target, title, points }: {
   id: string;

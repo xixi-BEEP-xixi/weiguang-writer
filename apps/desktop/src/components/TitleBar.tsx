@@ -1,11 +1,9 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { BookOpen, ChevronDown, Maximize2, Minus, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { isTauriRuntime } from '../data/aiSettings';
 import { useWriterStore } from '../data/writerStore';
 
-function runningInTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
 
 export function TitleBar() {
   const [maximized, setMaximized] = useState(false);
@@ -14,7 +12,7 @@ export function TitleBar() {
   const selectProject = useWriterStore((state) => state.selectProject);
 
   useEffect(() => {
-    if (!runningInTauri()) return;
+    if (!isTauriRuntime()) return;
     const appWindow = getCurrentWindow();
     let unlisten: (() => void) | undefined;
     void appWindow.isMaximized().then(setMaximized).catch(() => undefined);
@@ -24,9 +22,9 @@ export function TitleBar() {
     return () => unlisten?.();
   }, []);
 
-  const minimize = () => { if (runningInTauri()) void getCurrentWindow().minimize(); };
-  const toggleMaximize = () => { if (runningInTauri()) void getCurrentWindow().toggleMaximize(); };
-  const close = () => { if (runningInTauri()) void getCurrentWindow().close(); };
+  const minimize = () => { if (isTauriRuntime()) void getCurrentWindow().minimize(); };
+  const toggleMaximize = () => { if (isTauriRuntime()) void getCurrentWindow().toggleMaximize(); };
+  const close = () => { if (isTauriRuntime()) void getCurrentWindow().close(); };
 
   return (
     <header className="window-titlebar" onDoubleClick={toggleMaximize}>

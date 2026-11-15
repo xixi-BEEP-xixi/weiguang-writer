@@ -14,20 +14,13 @@ import type {
   Volume,
   WorkspaceData,
 } from '../domain/types';
+import { parseJson } from './json';
 import { readStoredWorkspace, saveLegacyWorkspace } from './localRepository';
 import { WORKSPACE_SCHEMA_STATEMENTS } from './schema';
 
 const DB_URL = 'sqlite:changye-writer.db';
 let database: Database | null = null;
 
-function parseJson<T>(value: unknown, fallback: T): T {
-  if (typeof value !== 'string') return fallback;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return fallback;
-  }
-}
 
 async function getSetting(key: string): Promise<string | null> {
   if (!database) return null;

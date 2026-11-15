@@ -1,4 +1,5 @@
-﻿import { Channel, invoke } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
+import { collectPlainText } from '../domain/blocks';
 import { createId } from '../domain/ids';
 import { providerError } from './aiError';
 import type { AIContextPack, AIOperation } from './contextPack';
@@ -9,7 +10,6 @@ import { useWriterStore } from './writerStore';
 import {
   assertAiBudget,
   calculateCost,
-  estimateMessageTokens,
   estimateRequestBudget,
   estimateTokens,
   recordAiUsage,
@@ -96,13 +96,6 @@ interface NativeHttpResponse {
   body: string;
 }
 
-function collectText(node: unknown): string {
-  if (!node || typeof node !== 'object') return '';
-  const value = node as { type?: string; text?: string; content?: unknown[] };
-  if (value.type === 'text') return value.text ?? '';
-  if (!Array.isArray(value.content)) return '';
-  return value.content.map(collectText).join('');
-}
 
 function contextText(context: AIContextPack): string {
   const cards = context.story_cards
@@ -117,7 +110,7 @@ function contextText(context: AIContextPack): string {
     .slice(0, 24)
     .map((item) => `- ${item.story_time ? `${item.story_time} · ` : ''}${item.title}（${item.status}）${item.description ? `：${item.description}` : ''}`)
     .join('\n');
-  const scene = collectText(context.scene_snapshot.doc_json);
+  const scene = collectPlainText(context.scene_snapshot.doc_json);
   const selection = context.selection?.text ?? '';
   return [
     '【当前场景正文】',
@@ -125,6 +118,7 @@ function contextText(context: AIContextPack): string {
     selection ? `\n【当前选区】\n${selection}` : '',
     context.nearby_text ? `\n【附近文本】\n${context.nearby_text.slice(-3000)}` : '',
     cards ? `\n【故事设定】\n${cards}` : '',
+    timeline ? `\n【时间线】\n${timeline}` : '',
     foreshadows ? `\n【伏笔状态】\n${foreshadows}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -628,7 +622,7 @@ function findEvidenceBlockId(document: unknown, quote: string): string | null {
     const value = node as { type?: string; text?: string; attrs?: { blockId?: string }; content?: unknown[] };
     if (value.type === 'text') return null;
     const blockId = value.attrs?.blockId ? String(value.attrs.blockId) : '';
-    const plain = collectText(value).replace(/\s+/g, '');
+    const plain = collectPlainText(value).replace(/\s+/g, '');
     if (blockId && plain.includes(needle)) return blockId;
     for (const child of value.content ?? []) {
       const found = visit(child);

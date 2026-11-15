@@ -1,0 +1,52 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+**/node_modules/
+**/dist/
+**/target/
+**/.vite/
+**/.cache/
+
+# Runtime and user data
+**/app-data/
+**/EBWebView/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backups/
+downloads/
+
+# Local tooling and secrets
+.tools/
+.npm-cache/
+.env
+.env.*
+!.env.example
+*.local
+*.log
+**/*.log
+
+# Website/deployment files are kept local to the distributor
+deploy/
+
+# Release artifacts
+release/
+tmp/
+*.exe
+*.msi
+*.zip
+*.7z
+*.pdb
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Generated preview files
+apps/desktop/ui-preview.png

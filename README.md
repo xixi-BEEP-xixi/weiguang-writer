@@ -2,6 +2,8 @@
 
 面向中文长篇小说与连载作者的 Windows 本地写作工作台。
 
+GitHub：<https://github.com/xixi-BEEP-xixi/weiguang-writer>
+
 **Local-first writing workspace with BYOK AI for Chinese long-form fiction.**
 
 ## 开源发布文章

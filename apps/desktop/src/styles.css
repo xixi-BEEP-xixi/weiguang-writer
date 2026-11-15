@@ -1600,3 +1600,6 @@ select:disabled {
   .outline-editor-head { flex-direction: column; }
   .outline-ai-actions { justify-content: flex-start; }
 }
+.range-scale { display: flex; justify-content: space-between; color: var(--faint); }
+.range-scale small { font-size: var(--font-meta); }
+.field-help { color: var(--faint); font-size: var(--font-meta); line-height: 1.6; }

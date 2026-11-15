@@ -361,7 +361,7 @@ fn perform_ai_http(request: AiHttpRequest, channel: tauri::ipc::Channel<AiHttpEv
     let request_handle = WinHandle(request_raw);
 
     let authorization = if request.api_key.is_empty() { String::new() } else { format!("Authorization: Bearer {}\r\n", request.api_key) };
-    let headers = wide(&format!("Content-Type: application/json; charset=utf-8\r\nAccept: text/event-stream, application/json\r\n{authorization}"));
+    let headers = wide(&format!("Content-Type: application/json; charset=utf-8\r\nAccept: text/event-stream, application/json\r\nAccept-Charset: utf-8\r\nAccept-Encoding: identity\r\n{authorization}"));
     let body = request.body.as_bytes();
     let sent = unsafe {
         WinHttpSendRequest(

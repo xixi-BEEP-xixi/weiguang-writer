@@ -1,5 +1,6 @@
 import { Channel, invoke } from '@tauri-apps/api/core';
 import { createId } from '../domain/ids';
+import { providerError } from './aiError';
 import type { AIContextPack, AIOperation } from './contextPack';
 import { chatEndpoint, isTauriRuntime, loadAiApiKey, loadAiSettings, type AiSettings } from './aiSettings';
 import { buildAiMemoryContext, saveAiOperation } from './aiMemoryStore';
@@ -139,15 +140,6 @@ function parseSseBlock(block: string): string[] {
     .filter(Boolean);
 }
 
-function errorFromRaw(status: number, raw: string): Error {
-  try {
-    const body = JSON.parse(raw) as ProviderResponse;
-    const message = typeof body.error === 'string' ? body.error : body.error?.message;
-    return new Error(message || `模型请求失败 HTTP ${status}`);
-  } catch {
-    return new Error(raw.slice(0, 300) || `模型请求失败 HTTP ${status}`);
-  }
-}
 
 function usageFromResponse(provider: ProviderResponse['usage'], settings: AiSettings): AIUsage | null {
   if (!provider) return null;
@@ -208,12 +200,12 @@ async function requestViaFetch(
     signal: callbacks.signal,
   });
   const raw = await response.text();
-  if (!response.ok) throw errorFromRaw(response.status, raw);
+  if (!response.ok) throw providerError(response.status, raw);
 
   if (!settings.stream || !raw.includes('data:')) {
     let payload: ProviderResponse;
-    try { payload = JSON.parse(raw) as ProviderResponse; } catch { throw errorFromRaw(response.status, raw); }
-    if (payload.error) throw errorFromRaw(response.status, raw);
+    try { payload = JSON.parse(raw) as ProviderResponse; } catch { throw providerError(response.status, raw); }
+    if (payload.error) throw providerError(response.status, raw);
     const state: ParsedStateWithCallback = { text: '', requestId: createId(), usage: null, sseSeen: false };
     consumePayload(payload, state, settings);
     if (!state.text.trim()) throw new Error('模型未返回内容');
@@ -316,14 +308,14 @@ async function requestViaNativeBridge(
   }
 
   if (callbacks.signal?.aborted) throw new DOMException('请求已取消', 'AbortError');
-  if (status >= 400) throw errorFromRaw(status, bodyText);
+  if (status >= 400) throw providerError(status, bodyText);
   const tail = decoder.decode();
   if (tail && settings.stream) buffer += tail;
 
   if (!settings.stream || !state.sseSeen) {
     let payload: ProviderResponse;
-    try { payload = JSON.parse(bodyText) as ProviderResponse; } catch { throw errorFromRaw(status, bodyText); }
-    if (payload.error) throw errorFromRaw(status, bodyText);
+    try { payload = JSON.parse(bodyText) as ProviderResponse; } catch { throw providerError(status, bodyText); }
+    if (payload.error) throw providerError(status, bodyText);
     state.text = '';
     consumePayload(payload, state, settings);
   } else {

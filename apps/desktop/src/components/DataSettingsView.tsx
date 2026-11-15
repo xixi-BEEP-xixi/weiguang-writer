@@ -101,7 +101,7 @@ export function DataSettingsView() {
         setMessage('稿件已按章节导入为新项目');
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : '文件导入失败');
+      setError(caught instanceof Error ? caught.message : typeof caught === 'string' ? caught : '文件导入失败');
     } finally { setBusy(false); }
   };
 

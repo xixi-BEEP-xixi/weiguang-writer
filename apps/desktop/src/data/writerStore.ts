@@ -65,13 +65,33 @@ function normalizeWorkspace(data: WorkspaceData): WorkspaceData {
     ...project,
     aiMemoryEnabled: project.aiMemoryEnabled === true,
   }));
+  const projectIds = new Set(projects.map((project) => project.id));
+  const volumes = data.volumes.filter((volume) => projectIds.has(volume.projectId));
+  const volumeIds = new Set(volumes.map((volume) => volume.id));
+  const chapters = data.chapters.filter((chapter) => projectIds.has(chapter.projectId) && volumeIds.has(chapter.volumeId));
+  const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+  const scenes = data.scenes.filter((scene) => projectIds.has(scene.projectId) && chapterIds.has(scene.chapterId));
+  const sceneIds = new Set(scenes.map((scene) => scene.id));
+  const outlineItems = (data.outlineItems ?? []).filter((item) => {
+    if (!projectIds.has(item.projectId)) return false;
+    if (item.entityType === 'volume') return volumeIds.has(item.entityId);
+    if (item.entityType === 'chapter') return chapterIds.has(item.entityId);
+    return sceneIds.has(item.entityId);
+  });
   const activeProject = projects.find((project) => project.id === data.activeProjectId) ?? projects[0];
-  const projectScenes = activeProject ? data.scenes.filter((scene) => scene.projectId === activeProject.id) : [];
+  const projectScenes = activeProject ? scenes.filter((scene) => scene.projectId === activeProject.id) : [];
   const activeScene = projectScenes.find((scene) => scene.id === data.activeSceneId) ?? projectScenes[0];
   return {
     ...data,
     projects,
-    outlineItems: data.outlineItems ?? [],
+    volumes,
+    chapters,
+    scenes,
+    characters: data.characters.filter((item) => projectIds.has(item.projectId)),
+    bibleCards: data.bibleCards.filter((item) => projectIds.has(item.projectId)),
+    timelineEvents: data.timelineEvents.filter((item) => projectIds.has(item.projectId)),
+    foreshadows: data.foreshadows.filter((item) => projectIds.has(item.projectId)),
+    outlineItems,
     activeProjectId: activeProject?.id ?? data.activeProjectId,
     activeSceneId: activeScene?.id ?? data.activeSceneId,
   };

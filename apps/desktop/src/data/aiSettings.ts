@@ -1,7 +1,8 @@
-import { invoke } from '@tauri-apps/api/core';
+﻿import { invoke } from '@tauri-apps/api/core';
 import { resolveAiPricing } from './aiPricing';
 
 export type AiCurrency = 'USD' | 'CNY';
+export type AiThinkingMode = 'disabled' | 'low' | 'high';
 
 export interface AiSettings {
   base_url: string;
@@ -9,6 +10,8 @@ export interface AiSettings {
   temperature: number;
   max_output_tokens: number;
   stream: boolean;
+  /** DeepSeek V4 thinking budget; visible text length is measured separately. */
+  thinking_mode: AiThinkingMode;
   currency: AiCurrency;
   input_price_per_million: number;
   output_price_per_million: number;
@@ -36,6 +39,7 @@ const BASE_AI_SETTINGS: AiSettings = {
   temperature: 0.8,
   max_output_tokens: 2000,
   stream: true,
+  thinking_mode: 'low',
   currency: 'USD',
   input_price_per_million: 0,
   output_price_per_million: 0,
@@ -100,6 +104,9 @@ export function loadAiSettings(): AiSettings {
       temperature: finiteNumber(parsed.temperature, DEFAULT_AI_SETTINGS.temperature, 0, 2),
       max_output_tokens: finiteNumber(parsed.max_output_tokens, DEFAULT_AI_SETTINGS.max_output_tokens, 100, 8000),
       stream: parsed.stream !== false,
+      thinking_mode: parsed.thinking_mode === 'disabled' || parsed.thinking_mode === 'low' || parsed.thinking_mode === 'high'
+        ? parsed.thinking_mode
+        : DEFAULT_AI_SETTINGS.thinking_mode,
       monthly_budget: finiteNumber(parsed.monthly_budget, 0, 0, 100_000_000),
       monthly_token_budget: finiteNumber(parsed.monthly_token_budget, 0, 0, 10_000_000_000),
       request_timeout_seconds: finiteNumber(parsed.request_timeout_seconds, DEFAULT_AI_SETTINGS.request_timeout_seconds, 15, 300),

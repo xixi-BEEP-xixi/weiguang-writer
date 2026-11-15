@@ -28,6 +28,16 @@ describe('story module store', () => {
     expect(useWriterStore.getState().data.bibleCards).toHaveLength(0);
   });
 
+  it('removes orphan records that would violate database foreign keys', () => {
+    const data = createInitialWorkspace();
+    data.timelineEvents.push({
+      id: 'orphan-event', projectId: 'missing-project', chapterId: null, sceneId: null,
+      title: '孤儿事件', description: '', storyTime: '', sort: 1, status: 'planned',
+      rev: 1, createdAt: '', updatedAt: '',
+    });
+    useWriterStore.getState().hydrate(data);
+    expect(useWriterStore.getState().data.timelineEvents).toHaveLength(0);
+  });
   it('switches the active project when selecting a scene from another project', () => {
     const originalProjectId = useWriterStore.getState().data.activeProjectId;
     useWriterStore.getState().addProject('第二部');

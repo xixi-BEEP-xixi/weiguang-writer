@@ -1,4 +1,4 @@
-import type { Editor } from '@tiptap/core';
+﻿import type { Editor } from '@tiptap/core';
 import { BrainCircuit, Copy, CornerDownLeft, LoaderCircle, ShieldCheck, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { analyzeChapter, estimateStreamRequest, extractMemoryCandidates, streamAI, type AIConflict, type AIStreamResult } from '../data/aiClient';
@@ -58,6 +58,7 @@ export function AIAssistantPanel({ editor, scene, chapterId, onClose }: AIAssist
   const [generatedOperation, setGeneratedOperation] = useState<AIOperation>('continue');
   const [generatedSelection, setGeneratedSelection] = useState<{ from: number; to: number; text: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const generationSeqRef = useRef(0);
   const [memoryExtracting, setMemoryExtracting] = useState(false);
   const [memoryNotice, setMemoryNotice] = useState('');
   const setActiveNav = useWriterStore((state) => state.setActiveNav);
@@ -94,6 +95,7 @@ export function AIAssistantPanel({ editor, scene, chapterId, onClose }: AIAssist
 
 
   const generate = async () => {
+    const sequence = ++generationSeqRef.current;
     setLoading(true);
     setError('');
     setResult(null);
@@ -113,17 +115,30 @@ export function AIAssistantPanel({ editor, scene, chapterId, onClose }: AIAssist
         instruction,
         targetLength,
         context,
-        { signal: controller.signal, onDelta: (chunk) => setStreamingText((current) => current + chunk) },
+        { signal: controller.signal, onDelta: (chunk) => { if (sequence === generationSeqRef.current) setStreamingText((current) => current + chunk); } },
       );
+      if (sequence !== generationSeqRef.current) return;
       setResult(response);
       setStreamingText(response.text);
     } catch (caught) {
+      if (sequence !== generationSeqRef.current) return;
       if (controller.signal.aborted || (caught instanceof DOMException && caught.name === 'AbortError')) setError('请求已取消');
       else setError(caught instanceof Error ? caught.message : 'AI 请求失败');
     } finally {
-      abortRef.current = null;
-      setLoading(false);
+      if (sequence === generationSeqRef.current) {
+        abortRef.current = null;
+        setLoading(false);
+      }
     }
+  };
+
+  const cancelGeneration = () => {
+    generationSeqRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
+    setStreamingText('');
+    setError('请求已取消');
   };
 
   const checkScene = async () => {
@@ -260,7 +275,7 @@ export function AIAssistantPanel({ editor, scene, chapterId, onClose }: AIAssist
           {loading ? <LoaderCircle size={15} className="spin" /> : <Sparkles size={15} />}
           {loading ? '正在生成' : budgetBlocked ? '预算已阻止请求' : '生成建议'}
         </button>
-        {loading && <button className="secondary-button" type="button" onClick={() => abortRef.current?.abort()}>取消</button>}
+        {loading && <button className="secondary-button" type="button" onClick={cancelGeneration}>取消</button>}
       </div>
 
       {error && <div className="ai-error" role="alert"><TriangleAlert size={14} />{error}</div>}
@@ -269,7 +284,7 @@ export function AIAssistantPanel({ editor, scene, chapterId, onClose }: AIAssist
         <section className="ai-result-card" aria-live="polite">
           <div className="ai-result-meta">
             <span>{result?.provider ?? 'streaming'}</span>
-            {result?.usage && <span>{result.usage.input_tokens} 输入 / {result.usage.output_tokens} 输出</span>}
+            {result?.usage && <span>{result.usage.input_tokens} 输入 / {result.usage.output_tokens} 输出{result.usage.reasoning_tokens ? `（其中思考 ${result.usage.reasoning_tokens}）` : ''}</span>}
             {result?.cost && <span>{formatAiCost(result.cost.total_cost, result.cost.currency)}</span>}
           </div>
           {generatedOperation === 'rewrite' && rewriteDiff.length > 0 ? (

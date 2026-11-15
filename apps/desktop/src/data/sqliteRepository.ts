@@ -212,7 +212,7 @@ function writeWorkspaceToDatabase(db: Database, data: WorkspaceData): void {
     insertRows(db, 'INSERT INTO foreshadows (id, project_id, title, description, planted_chapter_id, resolved_chapter_id, planned_payoff, status, rev, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       data.foreshadows.map((item) => [item.id, item.projectId, item.title, item.description, item.plantedChapterId, item.resolvedChapterId, item.plannedPayoff, item.status, item.rev, item.createdAt, item.updatedAt]));
     insertRows(db, 'INSERT INTO outline_items (id, project_id, entity_type, entity_id, goal, conflict, turn, outcome, characters_json, notes, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      data.outlineItems.map((item) => [item.id, item.projectId, item.entityType, item.entityId, item.goal, item.conflict, item.turn, item.outcome, JSON.stringify(item.characters), item.notes, item.status, item.createdAt, item.updatedAt]));
+      (data.outlineItems ?? []).map((item) => [item.id, item.projectId, item.entityType, item.entityId, item.goal, item.conflict, item.turn, item.outcome, JSON.stringify(item.characters), item.notes, item.status, item.createdAt, item.updatedAt]));
     insertRows(db, 'INSERT INTO settings (key, value) VALUES (?, ?)', [
       ['active_project_id', data.activeProjectId],
       ['active_scene_id', data.activeSceneId],

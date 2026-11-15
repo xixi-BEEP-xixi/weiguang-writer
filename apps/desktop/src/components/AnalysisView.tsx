@@ -1,4 +1,4 @@
-import { BookOpenCheck, Download, FileText, LoaderCircle, Play, RotateCcw, ShieldCheck, Square, Upload } from 'lucide-react';
+﻿import { BookOpenCheck, Download, FileText, LoaderCircle, Play, RotateCcw, ShieldCheck, Square, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { directChat } from '../data/aiClient';
 import { loadAiSettings } from '../data/aiSettings';
@@ -17,7 +17,7 @@ function collectText(node: unknown): string {
   return value.content.map(collectText).join('');
 }
 
-function chunkText(text: string, size = 12000): string[] {
+function chunkText(text: string, size = 8000): string[] {
   const normalized = text.replace(/\r\n/g, '\n').trim();
   if (!normalized) return [];
   const chunks: string[] = [];
@@ -51,6 +51,7 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
+  const runSeqRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +75,7 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
   };
 
   const run = async () => {
+    const sequence = ++runSeqRef.current;
     setBusy(true); setError(''); setProgress('');
     const controller = new AbortController();
     abortRef.current = controller;
@@ -81,7 +83,8 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
       const source = await readSource();
       const chunks = chunkText(source);
       if (chunks.length === 0) throw new Error('没有可分析的正文');
-      const settings = { ...loadAiSettings(), stream: false, max_output_tokens: 2000 };
+      const loadedSettings = loadAiSettings();
+      const settings = { ...loadedSettings, stream: false, max_output_tokens: 16000 };
       let material = source;
       if (chunks.length > 1) {
         const notes: string[] = [];
@@ -116,15 +119,25 @@ export function AnalysisView({ kind }: { kind: AnalysisKind }) {
       setReport(saved);
       setProgress('分析完成');
     } catch (caught) {
+      if (sequence !== runSeqRef.current) return;
       if (controller.signal.aborted) setError('分析已取消');
-      else setError(caught instanceof Error ? caught.message : '分析失败');
+      else setError(caught instanceof Error ? caught.message : typeof caught === 'string' ? caught : '分析失败');
     } finally {
-      setBusy(false);
-      abortRef.current = null;
+      if (sequence === runSeqRef.current) {
+        setBusy(false);
+        abortRef.current = null;
+      }
     }
   };
 
-  const cancel = () => abortRef.current?.abort();
+  const cancel = () => {
+    runSeqRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setBusy(false);
+    setProgress('');
+    setError('分析已取消');
+  };
 
   const exportReport = () => {
     if (!report) return;

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+﻿import { invoke } from '@tauri-apps/api/core';
 import Database from '@tauri-apps/plugin-sql';
 import { isTauriRuntime } from './aiSettings';
 
@@ -33,6 +33,7 @@ async function db(): Promise<Database> {
   if (!databasePromise) databasePromise = Database.load(DB_URL);
   const database = await databasePromise;
   if (!schemaReady) {
+    await database.execute('PRAGMA busy_timeout = 5000');
     await database.execute(`CREATE TABLE IF NOT EXISTS scene_versions (
       id TEXT PRIMARY KEY, project_id TEXT NOT NULL, scene_id TEXT NOT NULL, label TEXT NOT NULL,
       content_hash TEXT NOT NULL, word_count INTEGER NOT NULL, restored_from TEXT NULL,
@@ -125,19 +126,43 @@ export async function deleteSceneVersionRow(sceneId: string, versionId: string):
   await (await db()).execute('DELETE FROM scene_versions WHERE id = $1 AND scene_id = $2', [versionId, sceneId]);
 }
 
+async function retryDatabase<T>(operation: () => Promise<T>, attempts = 4): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try { return await operation(); } catch (error) {
+      lastError = error;
+      if (!/locked|busy/i.test(String(error)) || attempt === attempts - 1) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export async function saveAnalysisReport(kind: string, source: string, text: string): Promise<StoredAnalysisReport> {
   const report: StoredAnalysisReport = { id: crypto.randomUUID(), kind, source, text, created_at: new Date().toISOString() };
+  const saveFallback = () => writeFallbackReports([report, ...readFallbackReports().filter((row) => row.kind !== kind)]);
   if (!isTauriRuntime()) {
-    const rows = readFallbackReports();
-    writeFallbackReports([report, ...rows.filter((row) => row.kind !== kind)]);
+    saveFallback();
     return report;
   }
-  const database = await db();
-  await database.execute('INSERT INTO analysis_reports (id, kind, source, text, created_at) VALUES ($1, $2, $3, $4, $5)', [report.id, kind, source, text, report.created_at]);
-  await database.execute(`DELETE FROM analysis_reports WHERE kind = $1 AND id NOT IN (
-    SELECT id FROM analysis_reports WHERE kind = $1 ORDER BY created_at DESC LIMIT 10
-  )`, [kind]);
-  return report;
+  try {
+    const database = await db();
+    await retryDatabase(async () => {
+      await database.execute('INSERT INTO analysis_reports (id, kind, source, text, created_at) VALUES ($1, $2, $3, $4, $5)', [report.id, kind, source, text, report.created_at]);
+      await database.execute(`DELETE FROM analysis_reports WHERE kind = $1 AND id NOT IN (
+        SELECT id FROM analysis_reports WHERE kind = $1 ORDER BY created_at DESC LIMIT 10
+      )`, [kind]);
+    });
+    return report;
+  } catch (error) {
+    // Never discard a completed report just because another app instance is
+    // holding a brief SQLite write lock.
+    if (/locked|busy|database/i.test(String(error))) {
+      saveFallback();
+      return report;
+    }
+    throw error;
+  }
 }
 
 export async function listAllAnalysisReports(): Promise<StoredAnalysisReport[]> {
@@ -158,12 +183,14 @@ export async function replaceAnalysisReports(rows: StoredAnalysisReport[]): Prom
 }
 
 export async function loadLatestAnalysisReport(kind: string): Promise<StoredAnalysisReport | null> {
-  if (!isTauriRuntime()) {
-    const rows = readFallbackReports();
-    return rows.find((row) => row.kind === kind) ?? null;
+  const fallback = readFallbackReports().filter((row) => row.kind === kind);
+  if (!isTauriRuntime()) return fallback.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+  try {
+    const rows = await (await db()).select<StoredAnalysisReport[]>('SELECT * FROM analysis_reports WHERE kind = $1 ORDER BY created_at DESC LIMIT 1', [kind]);
+    return [...rows, ...fallback].sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+  } catch {
+    return fallback.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
   }
-  const rows = await (await db()).select<StoredAnalysisReport[]>('SELECT * FROM analysis_reports WHERE kind = $1 ORDER BY created_at DESC LIMIT 1', [kind]);
-  return rows[0] ?? null;
 }
 export async function createLocalDatabaseBackup(force = false): Promise<string | null> {
   if (!isTauriRuntime()) return null;

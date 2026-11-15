@@ -1,4 +1,4 @@
-import { CheckCircle2, Coins, KeyRound, LoaderCircle, PlugZap, Save, ShieldCheck, Trash2 } from 'lucide-react';
+﻿import { CheckCircle2, Coins, KeyRound, LoaderCircle, PlugZap, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   AI_PROVIDER_PRESETS,
@@ -118,6 +118,7 @@ export function AISettingsView() {
         <div className="field"><span>API Key</span><div className="code-row"><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={keyConfigured ? '已安全保存；输入新 Key 可替换' : '粘贴你的模型 API Key'} autoComplete="off" /><span className={`key-status ${keyConfigured ? 'is-set' : ''}`}><KeyRound size={13} />{keyConfigured ? '已保存' : '未配置'}</span></div></div>
         <div className="ai-settings-grid">
           <label className="field"><span>创意程度 {settings.temperature.toFixed(2)}</span><input type="range" min="0" max="2" step="0.05" value={settings.temperature} onChange={(event) => update('temperature', Number(event.target.value))} /><span className="range-scale"><small>更稳定</small><small>更有创意</small></span><small className="field-help">数值越低，AI 越按已有内容稳妥地写；数值越高，变化和脑洞越多。日常续写建议 0.8。</small></label>
+          <label className="field"><span>思考强度</span><select value={settings.thinking_mode} onChange={(event) => update('thinking_mode', event.target.value as typeof settings.thinking_mode)}><option value="disabled">关闭</option><option value="low">低（推荐）</option><option value="high">高</option></select><small className="field-help">思考只影响模型内部推演，不计入正文目标字数；思考 Token 仍会计入 API 用量和费用。</small></label>
           <label className="field"><span>最大输出 Token</span><input type="number" min="100" max="8000" step="100" value={settings.max_output_tokens} onChange={(event) => update('max_output_tokens', Number(event.target.value))} /></label>
           <label className="field"><span>请求超时（秒）</span><input type="number" min="15" max="300" step="5" value={settings.request_timeout_seconds} onChange={(event) => update('request_timeout_seconds', Number(event.target.value))} /></label>
           <label className="ai-strict-toggle"><input type="checkbox" checked={settings.stream} onChange={(event) => update('stream', event.target.checked)} />流式显示生成内容</label>
@@ -143,7 +144,8 @@ export function AISettingsView() {
         </div>
         <div className="ai-usage-strip">
           <div><span>本月调用</span><strong>{usageSummary.calls} 次</strong></div>
-          <div><span>输入 / 输出</span><strong>{usageSummary.input_tokens.toLocaleString()} / {usageSummary.output_tokens.toLocaleString()}</strong></div>
+          <div><span>输入 / 输出（含思考）</span><strong>{usageSummary.input_tokens.toLocaleString()} / {usageSummary.output_tokens.toLocaleString()}</strong></div>
+          <div><span>其中思考 Token</span><strong>{usageSummary.reasoning_tokens.toLocaleString()}</strong></div>
           <div><span>本月估算费用</span><strong>{settings.pricing_resolved ? formatAiCost(usageSummary.total_cost, usageSummary.currency) : '暂无参考价'}</strong></div>
           <div><span>Token 上限</span><strong>{settings.monthly_token_budget > 0 ? `${usageSummary.total_tokens.toLocaleString()} / ${settings.monthly_token_budget.toLocaleString()}` : '未设置上限'}</strong></div>
         </div>

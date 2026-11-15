@@ -1,6 +1,6 @@
 import mammoth from 'mammoth';
 import { createId } from './ids';
-import type { Chapter, Project, Scene, Volume, WorkspaceData } from './types';
+import type { Chapter, OutlineItem, Project, Scene, Volume, WorkspaceData } from './types';
 
 interface Section { title: string; body: string }
 
@@ -50,6 +50,7 @@ export function importManuscript(data: WorkspaceData, filename: string, text: st
   };
   const chapters: Chapter[] = [];
   const scenes: Scene[] = [];
+  const outlineItems: OutlineItem[] = [];
   const sections = splitSections(text);
   sections.forEach((section, index) => {
     const chapter: Chapter = {
@@ -66,13 +67,20 @@ export function importManuscript(data: WorkspaceData, filename: string, text: st
     chapter.defaultSceneId = scene.id;
     chapters.push(chapter);
     scenes.push(scene);
+    outlineItems.push(
+      { id: createId(), projectId: project.id, entityType: 'chapter', entityId: chapter.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+      { id: createId(), projectId: project.id, entityType: 'scene', entityId: scene.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+    );
   });
+  outlineItems.unshift({ id: createId(), projectId: project.id, entityType: 'volume', entityId: volume.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp });
   return {
     ...data,
+    schemaVersion: 3,
     projects: [...data.projects, project],
     volumes: [...data.volumes, volume],
     chapters: [...data.chapters, ...chapters],
     scenes: [...data.scenes, ...scenes],
+    outlineItems: [...(data.outlineItems ?? []), ...outlineItems],
     activeProjectId: project.id,
     activeSceneId: scenes[0]?.id ?? data.activeSceneId,
   };

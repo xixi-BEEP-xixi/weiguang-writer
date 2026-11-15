@@ -117,6 +117,7 @@ async function insertRows(db: Database, sql: string, rows: Array<Array<string | 
 async function writeWorkspaceToDatabase(data: WorkspaceData): Promise<void> {
   if (!database) throw new Error('原生 SQLite 尚未初始化');
   await database.execute('BEGIN IMMEDIATE');
+  let stage = '清理旧数据';
   try {
     await database.execute('DELETE FROM outline_items');
     await database.execute('DELETE FROM foreshadows');
@@ -128,24 +129,34 @@ async function writeWorkspaceToDatabase(data: WorkspaceData): Promise<void> {
     await database.execute('DELETE FROM volumes');
     await database.execute('DELETE FROM projects');
     await database.execute('DELETE FROM settings');
-    await insertRows(database, 'INSERT INTO projects (id, name, type, goal_words, status, rev, created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+    stage = '写入项目';
+    await insertRows(database, 'INSERT INTO projects (id, name, type, goal_words, status, ai_memory_enabled, rev, created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
       data.projects.map((item) => [item.id, item.name, item.type, item.goalWords, item.status, item.aiMemoryEnabled ? 1 : 0, item.rev, item.createdAt, item.updatedAt, item.deletedAt ?? null]));
+    stage = '写入卷';
     await insertRows(database, 'INSERT INTO volumes (id, project_id, title, sort, goal_words, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
       data.volumes.map((item) => [item.id, item.projectId, item.title, item.sort, item.goalWords, item.rev, item.createdAt, item.updatedAt]));
+    stage = '写入章节';
     await insertRows(database, 'INSERT INTO chapters (id, project_id, volume_id, title, sort, status, default_scene_id, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
       data.chapters.map((item) => [item.id, item.projectId, item.volumeId, item.title, item.sort, item.status, item.defaultSceneId, item.rev, item.createdAt, item.updatedAt]));
+    stage = '写入场景';
     await insertRows(database, 'INSERT INTO scenes (id, project_id, chapter_id, title, sort, status, doc_json, word_count, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
       data.scenes.map((item) => [item.id, item.projectId, item.chapterId, item.title, item.sort, item.status, JSON.stringify(item.doc), item.wordCount, item.rev, item.createdAt, item.updatedAt]));
+    stage = '写入人物';
     await insertRows(database, 'INSERT INTO characters (id, project_id, name, aliases_json, role, notes, rev, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
       data.characters.map((item) => [item.id, item.projectId, item.name, JSON.stringify(item.aliases), item.role, item.notes, item.rev, item.updatedAt]));
+    stage = '写入故事设定';
     await insertRows(database, 'INSERT INTO bible_cards (id, project_id, kind, name, aliases_json, summary, details, tags_json, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
       data.bibleCards.map((item) => [item.id, item.projectId, item.kind, item.name, JSON.stringify(item.aliases), item.summary, item.details, JSON.stringify(item.tags), item.rev, item.createdAt, item.updatedAt]));
+    stage = '写入时间线';
     await insertRows(database, 'INSERT INTO timeline_events (id, project_id, chapter_id, scene_id, title, description, story_time, sort, status, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
       data.timelineEvents.map((item) => [item.id, item.projectId, item.chapterId, item.sceneId, item.title, item.description, item.storyTime, item.sort, item.status, item.rev, item.createdAt, item.updatedAt]));
+    stage = '写入伏笔';
     await insertRows(database, 'INSERT INTO foreshadows (id, project_id, title, description, planted_chapter_id, resolved_chapter_id, planned_payoff, status, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
       data.foreshadows.map((item) => [item.id, item.projectId, item.title, item.description, item.plantedChapterId, item.resolvedChapterId, item.plannedPayoff, item.status, item.rev, item.createdAt, item.updatedAt]));
+    stage = '写入大纲';
     await insertRows(database, 'INSERT INTO outline_items (id, project_id, entity_type, entity_id, goal, conflict, turn, outcome, characters_json, notes, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
-      data.outlineItems.map((item) => [item.id, item.projectId, item.entityType, item.entityId, item.goal, item.conflict, item.turn, item.outcome, JSON.stringify(item.characters), item.notes, item.status, item.createdAt, item.updatedAt]));
+      (data.outlineItems ?? []).map((item) => [item.id, item.projectId, item.entityType, item.entityId, item.goal, item.conflict, item.turn, item.outcome, JSON.stringify(item.characters), item.notes, item.status, item.createdAt, item.updatedAt]));
+    stage = '写入设置';
     await insertRows(database, 'INSERT INTO settings (key, value) VALUES ($1, $2)', [
       ['active_project_id', data.activeProjectId],
       ['active_scene_id', data.activeSceneId],
@@ -154,7 +165,8 @@ async function writeWorkspaceToDatabase(data: WorkspaceData): Promise<void> {
     await database.execute('COMMIT');
   } catch (error) {
     await database.execute('ROLLBACK');
-    throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`保存${stage}失败：${message}`);
   }
 }
 

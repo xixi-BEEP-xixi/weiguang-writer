@@ -1,4 +1,4 @@
-import type { AiCurrency, AiSettings } from './aiSettings';
+﻿import type { AiCurrency, AiSettings } from './aiSettings';
 
 export interface AiCost {
   input_cost: number;
@@ -14,6 +14,7 @@ export interface AiUsageRecord extends AiCost {
   model: string;
   input_tokens: number;
   output_tokens: number;
+  reasoning_tokens?: number;
 }
 
 export interface AiUsageSummary {
@@ -21,6 +22,7 @@ export interface AiUsageSummary {
   calls: number;
   input_tokens: number;
   output_tokens: number;
+  reasoning_tokens: number;
   total_tokens: number;
   total_cost: number;
   currency: AiCurrency;
@@ -103,6 +105,7 @@ export function getAiUsageSummary(settings?: Pick<AiSettings, 'currency'>, date 
     calls: monthlyRecords.length,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
+    reasoning_tokens: monthlyRecords.reduce((sum, record) => sum + (record.reasoning_tokens ?? 0), 0),
     total_tokens: inputTokens + outputTokens,
     total_cost: pricedRecords.reduce((sum, record) => sum + record.total_cost, 0),
     currency,
@@ -149,6 +152,7 @@ export function recordAiUsage(
   outputTokens: number,
   settings: AiSettings,
   date = new Date(),
+  reasoningTokens = 0,
 ): AiUsageRecord {
   const cost = calculateCost(inputTokens, outputTokens, settings);
   const record: AiUsageRecord = {
@@ -158,6 +162,7 @@ export function recordAiUsage(
     model,
     input_tokens: Math.max(0, Math.round(inputTokens)),
     output_tokens: Math.max(0, Math.round(outputTokens)),
+    ...(reasoningTokens > 0 ? { reasoning_tokens: Math.round(reasoningTokens) } : {}),
     ...cost,
   };
   writeRecords([record, ...readRecords()]);

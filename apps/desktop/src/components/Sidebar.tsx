@@ -6,6 +6,7 @@ import type { NavKey } from '../domain/types';
 const navItems: Array<{ key: NavKey; label: string; icon: LucideIcon }> = [
   { key: 'shelf', label: '书架', icon: LibraryBig },
   { key: 'writing', label: '写作', icon: PenLine },
+  { key: 'outline', label: '大纲', icon: ListTree },
   { key: 'bible', label: '故事圣经', icon: BookOpen },
   { key: 'memory', label: '长期记忆', icon: BrainCircuit },
   { key: 'timeline', label: '时间线', icon: GitBranch },

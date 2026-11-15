@@ -6,6 +6,7 @@ import { createInitialWorkspace } from '../domain/defaults';
 import { useWriterStore } from '../data/writerStore';
 import { ForeshadowView } from './ForeshadowView';
 import { OutlineView } from './OutlineView';
+import { Sidebar } from './Sidebar';
 import { StoryBibleView } from './StoryBibleView';
 import { TimelineView } from './TimelineView';
 
@@ -35,6 +36,10 @@ describe('story module views', () => {
     expect(container.textContent).toContain('详细设定');
   });
 
+  it('exposes the outline entry in primary navigation', () => {
+    act(() => root.render(<Sidebar />));
+    expect(container.textContent).toContain('大纲');
+  });
   it('renders the outline workspace with an editable chapter goal', () => {
     act(() => root.render(<OutlineView />));
     expect(container.textContent).toContain('大纲');

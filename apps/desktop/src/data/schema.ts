@@ -47,7 +47,15 @@ CREATE TABLE IF NOT EXISTS foreshadows (
   status TEXT NOT NULL, rev INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS outline_items (
+  id TEXT PRIMARY KEY, project_id TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+  goal TEXT NOT NULL, conflict TEXT NOT NULL, turn TEXT NOT NULL, outcome TEXT NOT NULL,
+  characters_json TEXT NOT NULL, notes TEXT NOT NULL, status TEXT NOT NULL,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS outline_items_entity ON outline_items(project_id, entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS outline_items_project_status ON outline_items(project_id, status, updated_at);CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS scene_versions (
   id TEXT PRIMARY KEY, project_id TEXT NOT NULL, scene_id TEXT NOT NULL, label TEXT NOT NULL,
   content_hash TEXT NOT NULL, word_count INTEGER NOT NULL, restored_from TEXT NULL,
@@ -62,6 +70,7 @@ CREATE INDEX IF NOT EXISTS scenes_chapter_sort ON scenes(chapter_id, sort);
 CREATE INDEX IF NOT EXISTS chapters_volume_sort ON chapters(volume_id, sort);
 INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, datetime('now'));
 INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, datetime('now'));
+INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (3, datetime('now'));
 CREATE INDEX IF NOT EXISTS bible_cards_project_kind ON bible_cards(project_id, kind, updated_at);
 CREATE INDEX IF NOT EXISTS timeline_events_project_sort ON timeline_events(project_id, sort);
 CREATE INDEX IF NOT EXISTS foreshadows_project_status ON foreshadows(project_id, status);

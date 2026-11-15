@@ -88,6 +88,26 @@ describe('story module store', () => {
     expect(data.scenes.find((item) => item.projectId === project.id)).toBeUndefined();
     expect(data.bibleCards.find((item) => item.projectId === project.id)).toBeUndefined();
   });
+  it('keeps outline data aligned with chapters and scenes', () => {
+    useWriterStore.getState().addChapter();
+    const data = useWriterStore.getState().data;
+    const chapter = data.chapters[data.chapters.length - 1];
+    const scene = data.scenes.find((item) => item.chapterId === chapter.id)!;
+    expect(data.outlineItems.some((item) => item.entityType === 'chapter' && item.entityId === chapter.id)).toBe(true);
+    expect(data.outlineItems.some((item) => item.entityType === 'scene' && item.entityId === scene.id)).toBe(true);
+
+    useWriterStore.getState().upsertOutlineItem('chapter', chapter.id, {
+      goal: '主角进入钟楼',
+      conflict: '守卫封锁出口',
+      status: 'writing',
+    });
+    const outline = useWriterStore.getState().data.outlineItems.find((item) => item.entityType === 'chapter' && item.entityId === chapter.id)!;
+    expect(outline.goal).toBe('主角进入钟楼');
+    expect(outline.status).toBe('writing');
+
+    useWriterStore.getState().deleteChapter(chapter.id);
+    expect(useWriterStore.getState().data.outlineItems.some((item) => item.entityId === chapter.id || item.entityId === scene.id)).toBe(false);
+  });
   it('edits timeline events and foreshadow lifecycle', () => {
     useWriterStore.getState().addTimelineEvent();
     const event = useWriterStore.getState().data.timelineEvents[0];

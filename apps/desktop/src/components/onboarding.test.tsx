@@ -25,9 +25,9 @@ describe('interface tour', () => {
     let closed = false;
     act(() => root.render(<OnboardingGuide onClose={() => { closed = true; }} />));
     expect(container.textContent).toContain('书架在这里');
-    expect(container.textContent).toContain('1 / 8');
+    expect(container.textContent).toContain('1 / 9');
 
-    for (let index = 0; index < 7; index += 1) {
+    for (let index = 0; index < 8; index += 1) {
       const next = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('下一步'));
       expect(next).toBeDefined();
       act(() => next!.dispatchEvent(new MouseEvent('click', { bubbles: true })));

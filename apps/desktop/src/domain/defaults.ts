@@ -34,7 +34,7 @@ export function createProjectBundle(name: string, aiMemoryEnabled = false, now =
 export function createInitialWorkspace(): WorkspaceData {
   const bundle = createProjectBundle('未命名长篇');
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     projects: [bundle.project],
     volumes: [bundle.volume],
     chapters: [bundle.chapter],
@@ -43,6 +43,7 @@ export function createInitialWorkspace(): WorkspaceData {
     bibleCards: [],
     timelineEvents: [],
     foreshadows: [],
+    outlineItems: [],
     activeProjectId: bundle.project.id,
     activeSceneId: bundle.scene.id,
   };

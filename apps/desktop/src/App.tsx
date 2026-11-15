@@ -8,6 +8,7 @@ import { DataSettingsView } from './components/DataSettingsView';
 import { ForeshadowView } from './components/ForeshadowView';
 import { InspectorPanel } from './components/InspectorPanel';
 import { MemoryView } from './components/MemoryView';
+import { OutlineView } from './components/OutlineView';
 import { ONBOARDING_STORAGE_KEY, OPEN_ONBOARDING_EVENT, OnboardingGuide } from './components/OnboardingGuide';
 import { SceneEditor } from './components/SceneEditor';
 import { Sidebar } from './components/Sidebar';
@@ -55,6 +56,7 @@ export default function App() {
 
   const renderStage = () => {
     if (activeNav === 'shelf') return <BookshelfView />;
+    if (activeNav === 'outline') return <OutlineView />;
     if (activeNav === 'bible') return <StoryBibleView />;
     if (activeNav === 'memory') return <MemoryView />;
     if (activeNav === 'timeline') return <TimelineView />;

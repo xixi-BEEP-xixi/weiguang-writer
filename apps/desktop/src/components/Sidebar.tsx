@@ -1,4 +1,4 @@
-import { Bot, BookOpen, BrainCircuit, DatabaseBackup, Flag, GitBranch, LibraryBig, PenLine, ScanText, Settings2, ShieldCheck } from 'lucide-react';
+import { Bot, BookOpen, BrainCircuit, DatabaseBackup, Flag, GitBranch, LibraryBig, ListTree, PenLine, ScanText, Settings2, ShieldCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useWriterStore } from '../data/writerStore';
 import type { NavKey } from '../domain/types';

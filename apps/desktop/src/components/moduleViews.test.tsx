@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createInitialWorkspace } from '../domain/defaults';
 import { useWriterStore } from '../data/writerStore';
 import { ForeshadowView } from './ForeshadowView';
+import { OutlineView } from './OutlineView';
 import { StoryBibleView } from './StoryBibleView';
 import { TimelineView } from './TimelineView';
 
@@ -34,6 +35,16 @@ describe('story module views', () => {
     expect(container.textContent).toContain('详细设定');
   });
 
+  it('renders the outline workspace with an editable chapter goal', () => {
+    act(() => root.render(<OutlineView />));
+    expect(container.textContent).toContain('大纲');
+    expect(container.textContent).toContain('第一章');
+    expect(container.textContent).toContain('写作目标');
+    const chapter = useWriterStore.getState().data.chapters[0];
+    useWriterStore.getState().upsertOutlineItem('chapter', chapter.id, { goal: '主角进入钟楼' });
+    act(() => root.render(<OutlineView />));
+    expect((container.querySelector('.outline-fields textarea') as HTMLTextAreaElement | null)?.value).toBe('主角进入钟楼');
+  });
   it('renders timeline and foreshadow editors', () => {
     useWriterStore.getState().addTimelineEvent();
     act(() => root.render(<TimelineView />));

@@ -3,7 +3,7 @@ import { ensureBlockIds } from '../domain/blocks';
 import { createId } from '../domain/ids';
 import { createInitialWorkspace, createProjectBundle, createScene } from '../domain/defaults';
 import { countDocumentCharacters } from '../domain/wordCount';
-import type { BibleCard, Character, Foreshadow, NavKey, SaveState, Scene, TimelineEvent, WorkspaceData } from '../domain/types';
+import type { BibleCard, Character, Foreshadow, NavKey, OutlineEntityType, OutlineItem, SaveState, Scene, TimelineEvent, WorkspaceData } from '../domain/types';
 
 
 interface WriterStore {
@@ -26,6 +26,11 @@ interface WriterStore {
   deleteScene: (sceneId: string) => void;
   updateChapterTitle: (chapterId: string, title: string) => void;
   cycleChapterStatus: (chapterId: string) => void;
+  upsertOutlineItem: (
+    entityType: OutlineEntityType,
+    entityId: string,
+    patch: Partial<Pick<OutlineItem, 'goal' | 'conflict' | 'turn' | 'outcome' | 'characters' | 'notes' | 'status'>>,
+  ) => void;
   addCharacter: (name: string) => void;
   deleteCharacter: (id: string) => void;
   addBibleCard: (kind: BibleCard['kind'], name: string) => void;
@@ -66,6 +71,7 @@ function normalizeWorkspace(data: WorkspaceData): WorkspaceData {
   return {
     ...data,
     projects,
+    outlineItems: data.outlineItems ?? [],
     activeProjectId: activeProject?.id ?? data.activeProjectId,
     activeSceneId: activeScene?.id ?? data.activeSceneId,
   };
@@ -162,12 +168,17 @@ export const useWriterStore = create<WriterStore>((set) => ({
       createdAt: stamp,
       updatedAt: stamp,
     };
+    const outlineItems: OutlineItem[] = [
+      { id: createId(), projectId: project.id, entityType: 'chapter', entityId: chapter.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+      { id: createId(), projectId: project.id, entityType: 'scene', entityId: scene.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+    ];
     return {
       saveState: 'saving',
       data: {
         ...data,
         chapters: [...data.chapters, chapter],
         scenes: [...data.scenes, scene],
+        outlineItems: [...data.outlineItems, ...outlineItems],
         activeSceneId: scene.id,
       },
     };
@@ -178,13 +189,21 @@ export const useWriterStore = create<WriterStore>((set) => ({
     if (!current) return {};
     const siblings = data.scenes.filter((scene) => scene.chapterId === current.chapterId);
     const scene = createScene(current.projectId, current.chapterId, `场景 ${siblings.length + 1}`, siblings.length + 1);
+    const stamp = nowIso();
+    const outline: OutlineItem = { id: createId(), projectId: scene.projectId, entityType: 'scene', entityId: scene.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp };
     return {
       saveState: 'saving',
-      data: { ...data, scenes: [...data.scenes, scene], activeSceneId: scene.id },
+      data: { ...data, scenes: [...data.scenes, scene], outlineItems: [...data.outlineItems, outline], activeSceneId: scene.id },
     };
   }),
   addProject: (name, aiMemoryEnabled = false) => set((state) => {
     const bundle = createProjectBundle(name.trim() || '未命名长篇', aiMemoryEnabled);
+    const stamp = nowIso();
+    const outlineItems: OutlineItem[] = [
+      { id: createId(), projectId: bundle.project.id, entityType: 'volume', entityId: bundle.volume.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+      { id: createId(), projectId: bundle.project.id, entityType: 'chapter', entityId: bundle.chapter.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+      { id: createId(), projectId: bundle.project.id, entityType: 'scene', entityId: bundle.scene.id, goal: '', conflict: '', turn: '', outcome: '', characters: [], notes: '', status: 'planned', createdAt: stamp, updatedAt: stamp },
+    ];
     return {
       saveState: 'saving',
       data: {
@@ -193,6 +212,7 @@ export const useWriterStore = create<WriterStore>((set) => ({
         volumes: [...state.data.volumes, bundle.volume],
         chapters: [...state.data.chapters, bundle.chapter],
         scenes: [...state.data.scenes, bundle.scene],
+        outlineItems: [...state.data.outlineItems, ...outlineItems],
         activeProjectId: bundle.project.id,
         activeSceneId: bundle.scene.id,
       },
@@ -217,6 +237,7 @@ export const useWriterStore = create<WriterStore>((set) => ({
         bibleCards: state.data.bibleCards.filter((item) => item.projectId !== projectId),
         timelineEvents: state.data.timelineEvents.filter((item) => item.projectId !== projectId),
         foreshadows: state.data.foreshadows.filter((item) => item.projectId !== projectId),
+        outlineItems: state.data.outlineItems.filter((item) => item.projectId !== projectId),
         activeProjectId: nextProject?.id ?? '',
         activeSceneId: nextScene?.id ?? '',
       },
@@ -232,12 +253,14 @@ export const useWriterStore = create<WriterStore>((set) => ({
     const fallbackScene = activeWasDeleted
       ? remainingScenes.filter((item) => item.projectId === chapter.projectId).sort((a, b) => a.sort - b.sort)[0] ?? null
       : currentScene;
+    const removedSceneIds = new Set(state.data.scenes.filter((item) => item.chapterId === chapterId).map((item) => item.id));
     return {
       saveState: 'saving',
       data: {
         ...state.data,
         chapters: remainingChapters,
         scenes: remainingScenes,
+        outlineItems: state.data.outlineItems.filter((item) => !(item.entityType === 'chapter' && item.entityId === chapterId) && !(item.entityType === 'scene' && removedSceneIds.has(item.entityId))),
         activeSceneId: activeWasDeleted ? fallbackScene?.id ?? '' : state.data.activeSceneId,
       },
     };
@@ -256,6 +279,7 @@ export const useWriterStore = create<WriterStore>((set) => ({
       data: {
         ...state.data,
         scenes: remainingScenes,
+        outlineItems: state.data.outlineItems.filter((item) => !(item.entityType === 'scene' && item.entityId === sceneId)),
         activeSceneId: state.data.activeSceneId === sceneId ? fallbackScene?.id ?? '' : state.data.activeSceneId,
       },
     };
@@ -269,6 +293,31 @@ export const useWriterStore = create<WriterStore>((set) => ({
         : chapter),
     },
   })),
+  upsertOutlineItem: (entityType, entityId, patch) => set((state) => {
+    const data = state.data;
+    const projectId = entityType === 'volume'
+      ? data.volumes.find((item) => item.id === entityId)?.projectId
+      : entityType === 'chapter'
+        ? data.chapters.find((item) => item.id === entityId)?.projectId
+        : data.scenes.find((item) => item.id === entityId)?.projectId;
+    if (!projectId) return {};
+    const stamp = nowIso();
+    const existing = data.outlineItems.find((item) => item.projectId === projectId && item.entityType === entityType && item.entityId === entityId);
+    if (existing) {
+      return {
+        saveState: 'saving',
+        data: {
+          ...data,
+          outlineItems: data.outlineItems.map((item) => item.id === existing.id ? { ...item, ...patch, updatedAt: stamp } : item),
+        },
+      };
+    }
+    const item: OutlineItem = {
+      id: createId(), projectId, entityType, entityId, goal: '', conflict: '', turn: '', outcome: '',
+      characters: [], notes: '', status: 'planned', ...patch, createdAt: stamp, updatedAt: stamp,
+    };
+    return { saveState: 'saving', data: { ...data, outlineItems: [...data.outlineItems, item] } };
+  }),
   cycleChapterStatus: (chapterId) => set((state) => {
     const order = ['draft', 'revising', 'done'] as const;
     return {

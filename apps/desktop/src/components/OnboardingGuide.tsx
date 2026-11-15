@@ -22,6 +22,7 @@ const steps: TourStep[] = [
   { target: '[data-tour="shelf-grid"]', nav: 'shelf', title: '点一本书开始写', body: '点击封面卡片进入对应作品；右上角和书架都提供新建书籍入口。' },
   { target: '[data-tour="writing"]', nav: 'writing', title: '写作页', body: '进入作品后会打开写作页。左侧管理卷、章和场景，中间是正文编辑器。' },
   { target: '[data-tour="editor-toolbar"]', nav: 'writing', title: '常用写作工具', body: '格式、版本历史、AI 助手和专注模式都在这里。按 Ctrl+S 可手动保存版本。' },
+  { target: '[data-tour="outline"]', nav: 'outline', title: '大纲', body: '按卷、章和场景规划目标、冲突、转折与结果；AI 只生成候选，不会自动覆盖。' },
   { target: '[data-tour="bible"]', nav: 'bible', title: '故事圣经', body: '人物、地点和设定集中放在这里。第一次进入会显示页面气泡，也可以点右下角“提示”重看。' },
   { target: '[data-tour="ai-assistant"]', nav: 'writing', title: 'AI 写作助手', body: '在 AI 面板中填写要求并生成建议。软件不内置模型，使用前需要配置你自己的 API。' },
   { target: '[data-tour="memory"]', nav: 'memory', title: '长期记忆', body: 'AI 提取的事实会先进入待确认区；只有你确认后的记忆才会参与后续上下文。' },

@@ -76,7 +76,7 @@ export function DataSettingsView() {
         const parsed = JSON.parse(text) as WorkspaceData | ProjectBackupFile;
         const isEnvelope = (parsed as ProjectBackupFile).format === 'weiguang-project-backup';
         const workspace = isEnvelope ? (parsed as ProjectBackupFile).workspace : parsed as WorkspaceData;
-        if (!workspace || workspace.schemaVersion !== 2 || !Array.isArray(workspace.projects) || !Array.isArray(workspace.scenes)) {
+        if (!workspace || workspace.schemaVersion !== 3 || !Array.isArray(workspace.projects) || !Array.isArray(workspace.scenes)) {
           throw new Error('不是有效的微光写作台备份文件');
         }
         const memories = isEnvelope ? (parsed as ProjectBackupFile).memories ?? {} : {};

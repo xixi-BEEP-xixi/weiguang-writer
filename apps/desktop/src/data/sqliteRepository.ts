@@ -2,7 +2,7 @@ import initSqlJs, { type Database } from 'sql.js';
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { createEmptyDoc, createInitialWorkspace } from '../domain/defaults';
 import { createId } from '../domain/ids';
-import type { BibleCard, Character, Chapter, Foreshadow, Project, Scene, SceneStatus, TimelineEvent, Volume, WorkspaceData } from '../domain/types';
+import type { BibleCard, Character, Chapter, Foreshadow, OutlineItem, Project, Scene, SceneStatus, TimelineEvent, Volume, WorkspaceData } from '../domain/types';
 import type { JSONContent } from '@tiptap/core';
 import { readStoredWorkspace, saveLegacyWorkspace } from './localRepository';
 import { WORKSPACE_SCHEMA } from './schema';
@@ -163,6 +163,12 @@ function loadWorkspaceFromDatabase(db: Database): WorkspaceData {
     plannedPayoff: String(row.planned_payoff), status: String(row.status) as Foreshadow['status'],
     rev: Number(row.rev), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
   }));
+  const outlineItems: OutlineItem[] = getRows(db, 'SELECT * FROM outline_items ORDER BY updated_at DESC').map((row) => ({
+    id: String(row.id), projectId: String(row.project_id), entityType: String(row.entity_type) as OutlineItem['entityType'],
+    entityId: String(row.entity_id), goal: String(row.goal), conflict: String(row.conflict), turn: String(row.turn),
+    outcome: String(row.outcome), characters: parseJson<string[]>(row.characters_json, []), notes: String(row.notes),
+    status: String(row.status) as OutlineItem['status'], createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+  }));
   const storedProjectId = getScalar(db, "SELECT value FROM settings WHERE key = 'active_project_id'");
   const storedSceneId = getScalar(db, "SELECT value FROM settings WHERE key = 'active_scene_id'");
   const activeProjectId = typeof storedProjectId === 'string' && projects.some((item) => item.id === storedProjectId)
@@ -172,7 +178,7 @@ function loadWorkspaceFromDatabase(db: Database): WorkspaceData {
     ? storedSceneId
     : scenes[0]?.id ?? '';
 
-  return { schemaVersion: 2, projects, volumes, chapters, scenes, characters, bibleCards, timelineEvents, foreshadows, activeProjectId, activeSceneId };
+  return { schemaVersion: 3, projects, volumes, chapters, scenes, characters, bibleCards, timelineEvents, foreshadows, outlineItems, activeProjectId, activeSceneId };
 }
 
 function insertRows(db: Database, sql: string, rows: Array<Array<string | number | null>>): void {
@@ -188,7 +194,7 @@ function insertRows(db: Database, sql: string, rows: Array<Array<string | number
 function writeWorkspaceToDatabase(db: Database, data: WorkspaceData): void {
   db.run('BEGIN IMMEDIATE');
   try {
-    db.run('DELETE FROM foreshadows; DELETE FROM timeline_events; DELETE FROM bible_cards; DELETE FROM characters; DELETE FROM scenes; DELETE FROM chapters; DELETE FROM volumes; DELETE FROM projects; DELETE FROM settings;');
+    db.run('DELETE FROM outline_items; DELETE FROM foreshadows; DELETE FROM timeline_events; DELETE FROM bible_cards; DELETE FROM characters; DELETE FROM scenes; DELETE FROM chapters; DELETE FROM volumes; DELETE FROM projects; DELETE FROM settings;');
     insertRows(db, 'INSERT INTO projects (id, name, type, goal_words, status, ai_memory_enabled, rev, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       data.projects.map((item) => [item.id, item.name, item.type, item.goalWords, item.status, item.aiMemoryEnabled ? 1 : 0, item.rev, item.createdAt, item.updatedAt, item.deletedAt ?? null]));
     insertRows(db, 'INSERT INTO volumes (id, project_id, title, sort, goal_words, rev, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -205,6 +211,8 @@ function writeWorkspaceToDatabase(db: Database, data: WorkspaceData): void {
       data.timelineEvents.map((item) => [item.id, item.projectId, item.chapterId, item.sceneId, item.title, item.description, item.storyTime, item.sort, item.status, item.rev, item.createdAt, item.updatedAt]));
     insertRows(db, 'INSERT INTO foreshadows (id, project_id, title, description, planted_chapter_id, resolved_chapter_id, planned_payoff, status, rev, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       data.foreshadows.map((item) => [item.id, item.projectId, item.title, item.description, item.plantedChapterId, item.resolvedChapterId, item.plannedPayoff, item.status, item.rev, item.createdAt, item.updatedAt]));
+    insertRows(db, 'INSERT INTO outline_items (id, project_id, entity_type, entity_id, goal, conflict, turn, outcome, characters_json, notes, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      data.outlineItems.map((item) => [item.id, item.projectId, item.entityType, item.entityId, item.goal, item.conflict, item.turn, item.outcome, JSON.stringify(item.characters), item.notes, item.status, item.createdAt, item.updatedAt]));
     insertRows(db, 'INSERT INTO settings (key, value) VALUES (?, ?)', [
       ['active_project_id', data.activeProjectId],
       ['active_scene_id', data.activeSceneId],

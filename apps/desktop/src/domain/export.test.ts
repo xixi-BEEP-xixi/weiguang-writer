@@ -5,7 +5,7 @@ import type { WorkspaceData } from './types';
 describe('TXT export', () => {
   it('exports volume, chapter and scene text in order', () => {
     const data: WorkspaceData = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       activeProjectId: 'p1',
       activeSceneId: 's1',
       projects: [],
@@ -20,6 +20,7 @@ describe('TXT export', () => {
       bibleCards: [],
       timelineEvents: [],
       foreshadows: [],
+      outlineItems: [],
     };
     const text = projectToTxt(data, 'p1');
     expect(text).toContain('第一卷');

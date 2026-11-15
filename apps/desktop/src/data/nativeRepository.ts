@@ -6,6 +6,7 @@ import type {
   Character,
   Chapter,
   Foreshadow,
+  OutlineItem,
   Project,
   Scene,
   SceneStatus,
@@ -44,6 +45,7 @@ async function loadWorkspaceFromDatabase(): Promise<WorkspaceData> {
   const bibleRows = await database.select<Array<Record<string, unknown>>>('SELECT * FROM bible_cards ORDER BY updated_at DESC');
   const timelineRows = await database.select<Array<Record<string, unknown>>>('SELECT * FROM timeline_events ORDER BY sort ASC');
   const foreshadowRows = await database.select<Array<Record<string, unknown>>>('SELECT * FROM foreshadows ORDER BY created_at ASC');
+  const outlineRows = await database.select<Array<Record<string, unknown>>>('SELECT * FROM outline_items ORDER BY updated_at DESC');
 
   const projects: Project[] = projectRows.map((row) => ({
     id: String(row.id), name: String(row.name), type: String(row.type) as Project['type'],
@@ -90,6 +92,12 @@ async function loadWorkspaceFromDatabase(): Promise<WorkspaceData> {
     plannedPayoff: String(row.planned_payoff), status: String(row.status) as Foreshadow['status'],
     rev: Number(row.rev), createdAt: String(row.created_at), updatedAt: String(row.updated_at),
   }));
+  const outlineItems: OutlineItem[] = outlineRows.map((row) => ({
+    id: String(row.id), projectId: String(row.project_id), entityType: String(row.entity_type) as OutlineItem['entityType'],
+    entityId: String(row.entity_id), goal: String(row.goal), conflict: String(row.conflict), turn: String(row.turn),
+    outcome: String(row.outcome), characters: parseJson<string[]>(row.characters_json, []), notes: String(row.notes),
+    status: String(row.status) as OutlineItem['status'], createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+  }));
 
   const storedProjectId = await getSetting('active_project_id');
   const storedSceneId = await getSetting('active_scene_id');
@@ -99,7 +107,7 @@ async function loadWorkspaceFromDatabase(): Promise<WorkspaceData> {
   const activeSceneId = storedSceneId && scenes.some((item) => item.id === storedSceneId)
     ? storedSceneId
     : scenes[0]?.id ?? '';
-  return { schemaVersion: 2, projects, volumes, chapters, scenes, characters, bibleCards, timelineEvents, foreshadows, activeProjectId, activeSceneId };
+  return { schemaVersion: 3, projects, volumes, chapters, scenes, characters, bibleCards, timelineEvents, foreshadows, outlineItems, activeProjectId, activeSceneId };
 }
 
 async function insertRows(db: Database, sql: string, rows: Array<Array<string | number | null>>): Promise<void> {
@@ -110,6 +118,7 @@ async function writeWorkspaceToDatabase(data: WorkspaceData): Promise<void> {
   if (!database) throw new Error('原生 SQLite 尚未初始化');
   await database.execute('BEGIN IMMEDIATE');
   try {
+    await database.execute('DELETE FROM outline_items');
     await database.execute('DELETE FROM foreshadows');
     await database.execute('DELETE FROM timeline_events');
     await database.execute('DELETE FROM bible_cards');
@@ -135,6 +144,8 @@ async function writeWorkspaceToDatabase(data: WorkspaceData): Promise<void> {
       data.timelineEvents.map((item) => [item.id, item.projectId, item.chapterId, item.sceneId, item.title, item.description, item.storyTime, item.sort, item.status, item.rev, item.createdAt, item.updatedAt]));
     await insertRows(database, 'INSERT INTO foreshadows (id, project_id, title, description, planted_chapter_id, resolved_chapter_id, planned_payoff, status, rev, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
       data.foreshadows.map((item) => [item.id, item.projectId, item.title, item.description, item.plantedChapterId, item.resolvedChapterId, item.plannedPayoff, item.status, item.rev, item.createdAt, item.updatedAt]));
+    await insertRows(database, 'INSERT INTO outline_items (id, project_id, entity_type, entity_id, goal, conflict, turn, outcome, characters_json, notes, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+      data.outlineItems.map((item) => [item.id, item.projectId, item.entityType, item.entityId, item.goal, item.conflict, item.turn, item.outcome, JSON.stringify(item.characters), item.notes, item.status, item.createdAt, item.updatedAt]));
     await insertRows(database, 'INSERT INTO settings (key, value) VALUES ($1, $2)', [
       ['active_project_id', data.activeProjectId],
       ['active_scene_id', data.activeSceneId],

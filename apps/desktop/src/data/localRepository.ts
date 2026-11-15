@@ -5,7 +5,7 @@ const STORAGE_KEY = 'changye.workspace.v1';
 function isWorkspaceData(value: unknown): value is WorkspaceData {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<Omit<WorkspaceData, 'schemaVersion'>> & { schemaVersion?: number };
-  return (candidate.schemaVersion === 1 || candidate.schemaVersion === 2) && Array.isArray(candidate.projects) && Array.isArray(candidate.scenes);
+  return (candidate.schemaVersion === 1 || candidate.schemaVersion === 2 || candidate.schemaVersion === 3) && Array.isArray(candidate.projects) && Array.isArray(candidate.scenes);
 }
 
 export function readStoredWorkspace(): WorkspaceData | null {
@@ -16,10 +16,11 @@ export function readStoredWorkspace(): WorkspaceData | null {
     if (!isWorkspaceData(parsed)) return null;
     return {
       ...parsed,
-      schemaVersion: 2,
+      schemaVersion: 3,
       bibleCards: parsed.bibleCards ?? [],
       timelineEvents: parsed.timelineEvents ?? [],
       foreshadows: parsed.foreshadows ?? [],
+      outlineItems: parsed.outlineItems ?? [],
     };
   } catch {
     return null;

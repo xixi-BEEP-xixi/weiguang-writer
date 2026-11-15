@@ -1,6 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 
-export type NavKey = 'shelf' | 'writing' | 'bible' | 'memory' | 'timeline' | 'foreshadow' | 'checks' | 'analysis' | 'aiSettings' | 'data' | 'settings';
+export type NavKey = 'shelf' | 'writing' | 'outline' | 'bible' | 'memory' | 'timeline' | 'foreshadow' | 'checks' | 'analysis' | 'aiSettings' | 'data' | 'settings';
 export type SceneStatus = 'draft' | 'revising' | 'done';
 export type SaveState = 'saved' | 'saving' | 'error';
 
@@ -115,8 +115,26 @@ export interface Foreshadow {
   updatedAt: string;
 }
 
+export type OutlineEntityType = 'volume' | 'chapter' | 'scene';
+export type OutlineStatus = 'planned' | 'writing' | 'done' | 'deviated';
+
+export interface OutlineItem {
+  id: string;
+  projectId: string;
+  entityType: OutlineEntityType;
+  entityId: string;
+  goal: string;
+  conflict: string;
+  turn: string;
+  outcome: string;
+  characters: string[];
+  notes: string;
+  status: OutlineStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 export interface WorkspaceData {
-  schemaVersion: 2;
+  schemaVersion: 3;
   projects: Project[];
   volumes: Volume[];
   chapters: Chapter[];
@@ -125,6 +143,7 @@ export interface WorkspaceData {
   bibleCards: BibleCard[];
   timelineEvents: TimelineEvent[];
   foreshadows: Foreshadow[];
+  outlineItems: OutlineItem[];
   activeProjectId: string;
   activeSceneId: string;
 }

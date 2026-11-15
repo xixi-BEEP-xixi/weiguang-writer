@@ -2,9 +2,10 @@ import CharacterCount from '@tiptap/extension-character-count';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Bold, ChevronLeft, ChevronRight, Heading2, History, Italic, List, ListOrdered, Maximize2, Minimize2, Quote, Redo2, Sparkles, Undo2 } from 'lucide-react';
+import { Bold, ChevronLeft, ChevronRight, Heading2, History, Italic, List, ListOrdered, Maximize2, Minimize2, Quote, Redo2, SlidersHorizontal, Sparkles, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import { loadWritingPreferences, saveWritingPreferences, type WritingPreferences } from '../data/writingPreferences';
 import { createSceneVersion } from '../data/versionClient';
 import { useWriterStore } from '../data/writerStore';
 import { BlockIdExtension } from '../domain/blockIdExtension';
@@ -33,11 +34,14 @@ export function SceneEditor({ scene, chapterTitle, projectName }: SceneEditorPro
   const sceneIdRef = useRef(scene.id);
   const [aiOpen, setAiOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [typographyOpen, setTypographyOpen] = useState(false);
+  const [writingPreferences, setWritingPreferences] = useState<WritingPreferences>(() => loadWritingPreferences());
   const [focusMode, setFocusMode] = useState(false);
   const [saveHint, setSaveHint] = useState('自动保存 · 2s');
   const [, setSelectionRevision] = useState(0);
 
   useEffect(() => { sceneIdRef.current = scene.id; }, [scene.id]);
+  useEffect(() => { saveWritingPreferences(writingPreferences); }, [writingPreferences]);
   useEffect(() => {
     document.documentElement.dataset.focusMode = focusMode ? 'true' : 'false';
     return () => { delete document.documentElement.dataset.focusMode; };
@@ -54,7 +58,7 @@ export function SceneEditor({ scene, chapterTitle, projectName }: SceneEditorPro
         setVersionsOpen(true);
         setAiOpen(false);
       }
-      if (event.key === 'Escape') { setAiOpen(false); setVersionsOpen(false); }
+      if (event.key === 'Escape') { setAiOpen(false); setVersionsOpen(false); setTypographyOpen(false); }
     };
     window.addEventListener('keydown', openAssistant);
     return () => window.removeEventListener('keydown', openAssistant);
@@ -118,13 +122,40 @@ export function SceneEditor({ scene, chapterTitle, projectName }: SceneEditorPro
         {tool('撤销', <Undo2 size={15} />, false, () => editor.chain().focus().undo().run())}
         {tool('重做', <Redo2 size={15} />, false, () => editor.chain().focus().redo().run())}
         <span className="toolbar-spacer" />
+        <button className={`tool-button ${typographyOpen ? 'is-active' : ''}`} type="button" title="正文排版设置" aria-label="正文排版设置" onClick={() => { setTypographyOpen((open) => !open); setAiOpen(false); setVersionsOpen(false); }}><SlidersHorizontal size={15} /></button>
         {tool('版本历史', <History size={15} />, versionsOpen, () => { setVersionsOpen((open) => !open); setAiOpen(false); })}
         {tool('AI 写作助手', <Sparkles size={15} />, aiOpen, () => { setAiOpen((open) => !open); setVersionsOpen(false); }, 'ai-assistant')}
         {tool(focusMode ? '退出专注模式' : '专注模式', focusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />, focusMode, () => setFocusMode((value) => !value))}
         <span className="toolbar-hint">Ctrl + Enter · AI 助手</span>
       </div>
-      <div className="editor-scroll"><div className="editor-paper"><EditorContent editor={editor} /></div></div>
-      {aiOpen && <AIAssistantPanel editor={editor} scene={scene} chapterId={scene.chapterId} onClose={() => setAiOpen(false)} />}
+            <div className="editor-scroll">
+        <div
+          className={`editor-paper ${writingPreferences.firstLineIndent ? 'is-indented' : ''}`}
+          data-align={writingPreferences.textAlign}
+          style={{
+            '--prose-font-family': writingPreferences.fontFamily === 'serif' ? 'var(--font-story)' : 'var(--font-ui)',
+            '--prose-font-size': `${writingPreferences.fontSize}px`,
+            '--prose-line-height': String(writingPreferences.lineHeight),
+            '--prose-paragraph-gap': `${writingPreferences.paragraphSpacing}em`,
+          } as CSSProperties}
+        >
+          <EditorContent editor={editor} />
+        </div>
+      </div>
+      {typographyOpen && <section className="typography-popover" aria-label="正文排版设置">
+        <div className="typography-popover-head">
+          <div><strong>正文排版</strong><span>设置会保存，并应用到所有场景的写作区。</span></div>
+          <button className="icon-button" type="button" aria-label="关闭排版设置" onClick={() => setTypographyOpen(false)}>×</button>
+        </div>
+        <label className="typography-check"><input type="checkbox" checked={writingPreferences.firstLineIndent} onChange={(event) => setWritingPreferences((current) => ({ ...current, firstLineIndent: event.target.checked }))} />首行缩进 2 字符</label>
+        <div className="typography-grid">
+          <label className="typography-field"><span>正文字体</span><select value={writingPreferences.fontFamily} onChange={(event) => setWritingPreferences((current) => ({ ...current, fontFamily: event.target.value as WritingPreferences['fontFamily'] }))}><option value="serif">宋体 / 衬线</option><option value="sans">黑体 / 无衬线</option></select></label>
+          <label className="typography-field"><span>字号</span><select value={writingPreferences.fontSize} onChange={(event) => setWritingPreferences((current) => ({ ...current, fontSize: Number(event.target.value) }))}>{[16, 17, 18, 19, 20, 22, 24].map((size) => <option key={size} value={size}>{size}px</option>)}</select></label>
+          <label className="typography-field"><span>行距</span><select value={writingPreferences.lineHeight} onChange={(event) => setWritingPreferences((current) => ({ ...current, lineHeight: Number(event.target.value) }))}>{[1.5, 1.65, 1.8, 1.95, 2.1].map((value) => <option key={value} value={value}>{value.toFixed(2)}</option>)}</select></label>
+          <label className="typography-field"><span>段间距</span><select value={writingPreferences.paragraphSpacing} onChange={(event) => setWritingPreferences((current) => ({ ...current, paragraphSpacing: Number(event.target.value) }))}>{[0, 0.35, 0.65, 1].map((value) => <option key={value} value={value}>{value === 0 ? '无额外间距' : `${value}em`}</option>)}</select></label>
+          <label className="typography-field"><span>段落对齐</span><select value={writingPreferences.textAlign} onChange={(event) => setWritingPreferences((current) => ({ ...current, textAlign: event.target.value as WritingPreferences['textAlign'] }))}><option value="justify">两端对齐</option><option value="left">左对齐</option><option value="center">居中</option></select></label>
+        </div>
+      </section>}      {aiOpen && <AIAssistantPanel editor={editor} scene={scene} chapterId={scene.chapterId} onClose={() => setAiOpen(false)} />}
       {versionsOpen && <VersionHistoryPanel editor={editor} scene={scene} onClose={() => setVersionsOpen(false)} />}
       <div className="editor-footer">
         <span>{scene.wordCount} 字</span>
